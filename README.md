@@ -37,6 +37,7 @@ This is a **synthetic-data portfolio project**, not a production factory system.
 | Batch and streaming ingestion | Planned | Azure Data Factory and Azure Event Hubs pipelines |
 | Lakehouse transformations | Planned | ADLS Gen2, Databricks/PySpark, Delta Lake and Bronze/Silver/Gold datasets |
 | Analytical models and dashboards | Planned | dbt models and tests, manufacturing KPIs and Power BI |
+| Snowflake analytical serving | Planned, after core lakehouse | Load curated datasets, build SQL/dbt marts and compare analytical delivery paths |
 | Infrastructure and delivery | Planned | Terraform, GitHub Actions, monitoring and deployment documentation |
 
 **Current focus:** finish Phase 1, the operational database. A checked item below means a file or demonstrated capability exists; planned tools are listed to explain direction, not to claim completed experience.
@@ -82,11 +83,12 @@ flowchart LR
 | Delta Lake | Reliable analytical tables and incremental processing | Planned |
 | dbt | Analytical models, documentation and data tests | Planned |
 | Power BI | Production and equipment KPI dashboards | Planned |
+| Snowflake | Alternative analytical warehouse for curated datasets and comparison with Delta Lake | Planned, later stage |
 | Terraform | Reproducible Azure infrastructure | Planned |
 | GitHub Actions | Continuous validation and deployment workflows | Planned |
 | Monitoring and logging | Pipeline health, failures and recovery | Planned |
 
-**Optional exploration:** Microsoft Fabric or Snowflake may be evaluated after the core pipeline is complete. Neither is part of the committed implementation scope today. The roadmap favours depth and working evidence over adding tools solely for a longer list.
+**Optional exploration:** Microsoft Fabric may be evaluated after the core pipeline is complete. Snowflake is a later project stage with a specific deliverable: publish curated data, model a small analytical mart and compare it with the Delta Lake path. The roadmap favours depth and working evidence over adding tools solely for a longer list.
 
 ## Operational data model
 
@@ -175,6 +177,7 @@ PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volu
 - [ ] Define dbt models, lineage and automated data tests.
 - [ ] Publish KPIs such as throughput, production attainment and downtime.
 - [ ] Create a Power BI dashboard with documented metric definitions.
+- [ ] Publish curated datasets to Snowflake, build a small SQL/dbt mart and compare its results and operating trade-offs with the Delta Lake Gold layer.
 - [ ] Add pipeline logging, failure handling and recovery checks.
 - [ ] Provision infrastructure with Terraform and validate changes with GitHub Actions.
 
