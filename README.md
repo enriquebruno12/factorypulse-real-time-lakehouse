@@ -1,52 +1,94 @@
 # FactoryPulse
 
-**Industrial data engineering project | PostgreSQL · Docker · SQL**
+### From industrial operations to an analytics-ready lakehouse
 
-FactoryPulse is a portfolio project that models manufacturing equipment, production orders and machine events as the foundation for an industrial analytics platform. It is being built in public, one working component at a time.
+**An evolving data engineering portfolio project built around manufacturing equipment, production orders and machine events.**
 
-> **Current stage:** local PostgreSQL environment and SQL schema are available. Event simulation, cloud ingestion, lakehouse layers and dashboards are planned; they are not implemented in this repository yet.
+[![Status](https://img.shields.io/badge/status-in%20development-F0AD4E)](#project-status)
+[![Current stack](https://img.shields.io/badge/current-PostgreSQL%20%7C%20Docker%20%7C%20SQL-336791)](#technology-roadmap)
+[![Data](https://img.shields.io/badge/data-synthetic-6C757D)](#scope-and-limitations)
 
-## What this project demonstrates today
+FactoryPulse models a realistic manufacturing data flow: operational records are generated, validated, ingested, transformed and ultimately made available for reporting. The project is being developed in stages so that each new tool has a clear role and a working result.
 
-- A reproducible PostgreSQL 17 service with Docker Compose, a health check and persistent local storage.
-- Relational modeling for `machines`, `production_orders` and `machine_events`.
-- Database constraints for identifiers, valid order statuses, positive planned quantities and chronological order dates.
-- Foreign keys that link orders to machines and ensure an event's order belongs to its machine.
-- Event semantics that distinguish machine state changes from incremental production reports.
+> **Where the project stands:** PostgreSQL 17 runs locally with Docker Compose, and SQL files define the three operational entities. The SQL files are still development scripts, not automated migrations. The event simulator, Azure services, lakehouse, orchestration and dashboards are future stages.
 
-The repository currently contains infrastructure and SQL scripts. It does not yet contain a running streaming pipeline or measured performance results.
+## Why this project exists
 
-## Business context
+Manufacturers need consistent answers about production output, equipment availability and faults. Those answers are difficult to trust when order data, machine events and reports follow different rules.
 
-Manufacturing teams need trustworthy answers about output, downtime and production progress. FactoryPulse uses a small operational model to explore questions such as:
+FactoryPulse is designed to answer:
 
-- How much has each machine produced for a given order?
-- How does reported output compare with the planned quantity?
-- When did machines start, stop or report faults?
-- How can operational records be validated before they reach analytics?
+- How many units did a machine produce for each order and time period?
+- How does actual output compare with the production plan?
+- When did a machine start, stop or report a fault?
+- Can an event be linked to the correct machine and production order?
+- How do we detect duplicate, late, invalid or missing events before reporting them?
 
-All data in this project is synthetic.
+This is a **synthetic-data portfolio project**, not a production factory system.
 
-## Repository at a glance
+## Project status
 
-```text
-.
-├── compose.yaml
-├── README.md
-└── sql/
-    ├── 001_create_machines.sql
-    ├── 002_create_production_orders.sql
-    └── 003_create_machine_events.sql
+| Area | Status | Evidence / next deliverable |
+| --- | --- | --- |
+| Local PostgreSQL environment | **Implemented** | [Docker Compose configuration](compose.yaml), health check, persistent volume |
+| Operational data model | **SQL files present** | [Machines](sql/001_create_machines.sql), [orders](sql/002_create_production_orders.sql), [events](sql/003_create_machine_events.sql) |
+| Repeatable schema deployment | **Next** | Separate schema creation from sample and intentionally invalid inserts; add clean setup and tests |
+| Event simulation | Planned | Python generator for starts, stops, faults and incremental production |
+| Batch and streaming ingestion | Planned | Azure Data Factory and Azure Event Hubs pipelines |
+| Lakehouse transformations | Planned | ADLS Gen2, Databricks/PySpark, Delta Lake and Bronze/Silver/Gold datasets |
+| Analytical models and dashboards | Planned | dbt models and tests, manufacturing KPIs and Power BI |
+| Infrastructure and delivery | Planned | Terraform, GitHub Actions, monitoring and deployment documentation |
+
+**Current focus:** finish Phase 1, the operational database. A checked item below means a file or demonstrated capability exists; planned tools are listed to explain direction, not to claim completed experience.
+
+## Architecture
+
+The diagram shows the **target architecture**. Only the PostgreSQL service and operational SQL model are in the repository today.
+
+```mermaid
+flowchart LR
+    SIM["Python event simulator<br/>(planned)"]
+    PG["PostgreSQL 17<br/>(current)"]
+    ADF["Azure Data Factory<br/>(planned batch)"]
+    EH["Azure Event Hubs<br/>(planned stream)"]
+    LAKE["ADLS Gen2<br/>(planned storage)"]
+    SPARK["Databricks + PySpark<br/>(planned processing)"]
+    MED["Delta Lake<br/>Bronze → Silver → Gold<br/>(planned)"]
+    DBT["dbt models + tests<br/>(planned)"]
+    BI["Power BI<br/>(planned dashboard)"]
+
+    SIM --> PG
+    SIM --> EH
+    PG --> ADF --> LAKE
+    EH --> SPARK
+    LAKE --> SPARK --> MED --> DBT --> BI
 ```
 
-| File | Purpose |
-| --- | --- |
-| [`compose.yaml`](compose.yaml) | Runs PostgreSQL 17 locally with a health check and named volume |
-| [`001_create_machines.sql`](sql/001_create_machines.sql) | Defines equipment master data |
-| [`002_create_production_orders.sql`](sql/002_create_production_orders.sql) | Defines orders and contains sample inserts and exploratory SQL |
-| [`003_create_machine_events.sql`](sql/003_create_machine_events.sql) | Defines machine events and their integrity rules |
+**Design intent:** combine operational data and event streams, preserve raw inputs, validate and standardise records, then publish documented business metrics. The implementation will evolve as each stage is built and tested.
 
-### Data model
+## Technology roadmap
+
+| Technology / practice | Role in FactoryPulse | Status |
+| --- | --- | --- |
+| SQL + PostgreSQL 17 | Operational schema, constraints and queries | **In use** |
+| Docker + Docker Compose | Reproducible local database and persistent storage | **In use** |
+| Git + GitHub | Version control and project documentation | **In use** |
+| Python | Synthetic event generation and ingestion utilities | Planned |
+| pytest | Automated checks for data rules and pipeline behaviour | Planned |
+| Azure Data Factory | Batch extraction and workflow orchestration | Planned |
+| Azure Event Hubs | Streaming event ingestion | Planned |
+| Azure Data Lake Storage Gen2 | Raw and processed cloud storage | Planned |
+| Azure Databricks + PySpark | Distributed event and batch transformations | Planned |
+| Delta Lake | Reliable analytical tables and incremental processing | Planned |
+| dbt | Analytical models, documentation and data tests | Planned |
+| Power BI | Production and equipment KPI dashboards | Planned |
+| Terraform | Reproducible Azure infrastructure | Planned |
+| GitHub Actions | Continuous validation and deployment workflows | Planned |
+| Monitoring and logging | Pipeline health, failures and recovery | Planned |
+
+**Optional exploration:** Microsoft Fabric or Snowflake may be evaluated after the core pipeline is complete. Neither is part of the committed implementation scope today. The roadmap favours depth and working evidence over adding tools solely for a longer list.
+
+## Operational data model
 
 ```mermaid
 erDiagram
@@ -55,64 +97,104 @@ erDiagram
     PRODUCTION_ORDERS o|--o{ MACHINE_EVENTS : associated_with
 ```
 
-- **`machines`** stores a unique machine code, name, installation date and active flag.
-- **`production_orders`** stores the assigned machine, product, planned and produced quantities, status and schedule.
-- **`machine_events`** stores timestamped starts, stops, faults and production reports. An event may have no order; when it does, the composite foreign key ties that order to the event's machine.
+| Entity | Purpose | Key rules |
+| --- | --- | --- |
+| `machines` | Equipment master data | Generated primary key; unique machine code; required name |
+| `production_orders` | Product, planned quantity and schedule for a machine | Machine foreign key; positive planned quantity; nonnegative produced quantity; valid status; end after start |
+| `machine_events` | Timestamped starts, stops, faults and production reports | Machine foreign key; optional order; machine–order match; event-specific production quantity |
 
-`PRODUCTION_REPORTED` values represent **increments**, not lifetime totals. Two reports of 300 and 450 units therefore contribute 750 units. Other event types require `units_produced = 0`.
+Order statuses are `PLANNED`, `IN_PROGRESS`, `COMPLETED` and `CANCELLED`. Event types are `MACHINE_STARTED`, `MACHINE_STOPPED`, `PRODUCTION_REPORTED` and `FAULT_DETECTED`.
 
-## Run locally
+### Event design decisions
 
-**Prerequisites:** Docker with Compose support and a PostgreSQL client such as `psql` or DBeaver.
+- **Production is incremental.** Reports of 300 and 450 units contribute 750 units, rather than representing two cumulative readings.
+- **State changes are distinct from output.** Starts, stops and faults carry zero `units_produced`.
+- **An order is optional for an event.** A machine can fault or stop without an active production order.
+- **An order must belong to the event's machine.** The composite foreign key prevents mismatched attribution.
+
+These rules live in PostgreSQL so that writers cannot bypass them merely by using a different application or script.
+
+## Run the current stage locally
+
+**Prerequisites:** Docker with Compose support, Git and an optional PostgreSQL client such as DBeaver.
 
 1. Clone this repository and enter its directory.
 2. Create a local `.env` file:
 
    ```dotenv
    POSTGRES_USER=factorypulse
-   POSTGRES_PASSWORD=choose-a-local-password
+   POSTGRES_PASSWORD=choose-a-strong-local-password
    POSTGRES_DB=factorypulse
    ```
 
-3. Start PostgreSQL and check its status:
+3. Start the service and inspect its health:
 
    ```bash
    docker compose up -d
    docker compose ps
    ```
 
-4. Open `psql` in the container:
+4. Open `psql`:
 
    ```bash
    docker compose exec postgres psql -U factorypulse -d factorypulse
    ```
 
-The database is available to local clients on `127.0.0.1:5433`. Docker stores its data in the named `postgres_data` volume. The `.env` file is ignored by Git.
+PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volume for local persistence. The `.env` file is excluded from version control.
 
-**Schema setup note:** the SQL files are currently development scripts, not a clean automated migration sequence. In particular, `002_create_production_orders.sql` includes sample inserts and an intentionally invalid example; running all three files unattended is not a supported setup path yet. The table definitions can be inspected and executed interactively in numerical order. Automated, repeatable migrations are a next step.
+> **Current SQL limitation:** the files under `sql/` contain exploratory queries and sample inserts. The orders script includes an intentionally invalid example. They can be inspected and used interactively in numerical order, but running the entire directory as unattended migrations is **not yet supported**. Cleaning this up is the next engineering milestone.
 
-## Engineering choices
+## Implementation plan
 
-| Decision | Reason |
-| --- | --- |
-| Enforce rules in PostgreSQL | Protects integrity regardless of which process writes the records |
-| Keep machine events separate from orders | Captures stops and faults even when no order is active |
-| Use a composite machine–order relationship | Prevents an event from attributing an order to the wrong machine |
-| Store production as event increments | Makes output aggregable by machine, order and time window |
-| Persist PostgreSQL in a Docker volume | Keeps local data across routine container recreation |
+### Phase 1 — Operational foundation · **in progress**
 
-## Roadmap
+- [x] Run PostgreSQL 17 with Docker Compose, health check and persistent volume.
+- [x] Write SQL definitions for machines, production orders and machine events.
+- [ ] Separate DDL, sample data and negative test cases.
+- [ ] Make schema creation repeatable from a clean database.
+- [ ] Add automated tests for constraints and machine–order integrity.
+- [ ] Document a complete, verified local setup.
 
-| Stage | Status | Intended outcome |
-| --- | --- | --- |
-| Operational schema and local database | **In progress** | Clean, repeatable migrations; validated event inserts; automated SQL checks |
-| Industrial event simulator | Planned | Configurable synthetic production and fault events |
-| Ingestion | Planned | Batch extraction and event streaming with failure handling |
-| Lakehouse | Planned | Bronze, Silver and Gold datasets with documented transformations |
-| Analytics and operations | Planned | Manufacturing KPIs, monitoring and recovery tests |
+### Phase 2 — Simulated industrial data
 
-The target architecture may use Python, Azure Event Hubs, Azure Data Factory, Azure Data Lake Storage, Databricks/PySpark, Delta Lake, dbt, Power BI, Terraform and GitHub Actions. These are **design intentions**, not technologies already delivered here. Each addition will be documented with runnable instructions and evidence when implemented.
+- [ ] Build a configurable Python simulator with reproducible sample data.
+- [ ] Generate production increments, state changes and faults.
+- [ ] Introduce duplicates, late arrivals and invalid records for quality tests.
+- [ ] Record expected event semantics and sample outputs.
+
+### Phase 3 — Ingestion and processing
+
+- [ ] Implement batch extraction from PostgreSQL using Azure Data Factory.
+- [ ] Publish and consume events through Azure Event Hubs.
+- [ ] Land raw data in ADLS Gen2.
+- [ ] Process data with Databricks/PySpark and Delta Lake.
+- [ ] Build Bronze, Silver and Gold layers with incremental logic and deduplication.
+
+### Phase 4 — Analytics and reliability
+
+- [ ] Define dbt models, lineage and automated data tests.
+- [ ] Publish KPIs such as throughput, production attainment and downtime.
+- [ ] Create a Power BI dashboard with documented metric definitions.
+- [ ] Add pipeline logging, failure handling and recovery checks.
+- [ ] Provision infrastructure with Terraform and validate changes with GitHub Actions.
+
+The deliverable for each phase is runnable code, a reproducible setup and evidence that the data rules work. Tool choices may change if a simpler solution better serves the learning objective.
+
+## Repository structure
+
+```text
+.
+├── .gitignore
+├── README.md
+├── compose.yaml
+└── sql/
+    ├── 001_create_machines.sql
+    ├── 002_create_production_orders.sql
+    └── 003_create_machine_events.sql
+```
+
+Only existing files are shown here. New directories will be added as their stages are implemented.
 
 ## Scope and limitations
 
-FactoryPulse is a learning and portfolio project using synthetic data. The current repository demonstrates local database setup and schema design. Streaming, cloud deployment, analytical models, dashboards, automated tests and performance benchmarks remain future work. No production readiness or real-time latency claim is made at this stage.
+FactoryPulse uses synthetic manufacturing data. The repository currently demonstrates a local PostgreSQL environment and SQL schema design. It does not yet provide a deployed cloud platform, a running stream, tested analytical layers, dashboards or measured latency and throughput. Status and implementation evidence will be updated as those components become available.
