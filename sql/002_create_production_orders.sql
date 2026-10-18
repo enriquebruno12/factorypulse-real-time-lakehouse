@@ -16,6 +16,7 @@ create table if not exists production_orders(
 	constraint ck_planned_quantity check (planned_quantity > 0),
 	constraint ck_produced_quantity check (produced_quantity >= 0),
 	constraint ck_status check (status in ('PLANNED','IN_PROGRESS','COMPLETED','CANCELLED')),
-	constraint ck_planned_end_at check (planned_end_at  > planned_start_at)
+	constraint ck_planned_end_at check (planned_end_at  > planned_start_at),
+	constraint uq_machine_order unique (machine_id,order_id)
 	
 );
