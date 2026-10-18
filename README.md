@@ -10,7 +10,7 @@
 
 FactoryPulse models a realistic manufacturing data flow: operational records are generated, validated, ingested, transformed and ultimately made available for reporting. The project is being developed in stages so that each new tool has a clear role and a working result.
 
-> **Where the project stands:** PostgreSQL 17 runs locally with Docker Compose, and SQL files define the three operational entities. The SQL files are still development scripts, not automated migrations. The event simulator, Azure services, lakehouse, orchestration and dashboards are future stages.
+> **Where the project stands:** PostgreSQL 17 runs locally with Docker Compose, and SQL files define the three operational entities. The SQL files contain only schema definitions. Optional demo data and isolated integrity tests are available; a managed migration workflow is still a future stage. The event simulator, Azure services, lakehouse, orchestration and dashboards are future stages.
 
 ## Why this project exists
 
@@ -32,7 +32,7 @@ This is a **synthetic-data portfolio project**, not a production factory system.
 | --- | --- | --- |
 | Local PostgreSQL environment | **Implemented** | [Docker Compose configuration](compose.yaml), health check, persistent volume |
 | Operational data model | **SQL files present** | [Machines](sql/001_create_machines.sql), [orders](sql/002_create_production_orders.sql), [events](sql/003_create_machine_events.sql) |
-| Repeatable schema deployment | **Next** | Separate schema creation from sample and intentionally invalid inserts; add clean setup and tests |
+| Database setup and verification | **In progress** | Schema files are separate from [demo data](seeds/demo_data.sql); [integrity tests](tests/test_database_integrity.py) are available, with execution instructions in [TESTING.md](TESTING.md) |
 | Event simulation | Planned | Python generator for starts, stops, faults and incremental production |
 | Batch and streaming ingestion | Planned | Azure Data Factory and Azure Event Hubs pipelines |
 | Lakehouse transformations | Planned | ADLS Gen2, Databricks/PySpark, Delta Lake and Bronze/Silver/Gold datasets |
@@ -74,8 +74,8 @@ flowchart LR
 | SQL + PostgreSQL 17 | Operational schema, constraints and queries | **In use** |
 | Docker + Docker Compose | Reproducible local database and persistent storage | **In use** |
 | Git + GitHub | Version control and project documentation | **In use** |
-| Python | Synthetic event generation and ingestion utilities | Planned |
-| pytest | Automated checks for data rules and pipeline behaviour | Planned |
+| Python | PostgreSQL integrity tests now; event simulation and ingestion utilities later | **In use for tests** |
+| pytest | PostgreSQL integrity test suite now; pipeline checks later | **Test suite added; run pending** |
 | Azure Data Factory | Batch extraction and workflow orchestration | Planned |
 | Azure Event Hubs | Streaming event ingestion | Planned |
 | Azure Data Lake Storage Gen2 | Raw and processed cloud storage | Planned |
@@ -144,7 +144,7 @@ These rules live in PostgreSQL so that writers cannot bypass them merely by usin
 
 PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volume for local persistence. The `.env` file is excluded from version control.
 
-> **Current SQL limitation:** the files under `sql/` contain exploratory queries and sample inserts. The orders script includes an intentionally invalid example. They can be inspected and used interactively in numerical order, but running the entire directory as unattended migrations is **not yet supported**. Cleaning this up is the next engineering milestone.
+> **Setup and verification:** apply the three schema files in numerical order to a fresh database. Optional data lives in `seeds/`, and integrity tests use a separate `factorypulse_test` database. See [TESTING.md](TESTING.md). These scripts are not yet managed by a migration tool; automated CI execution is still planned.
 
 ## Implementation plan
 
@@ -152,9 +152,10 @@ PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volu
 
 - [x] Run PostgreSQL 17 with Docker Compose, health check and persistent volume.
 - [x] Write SQL definitions for machines, production orders and machine events.
-- [ ] Separate DDL, sample data and negative test cases.
-- [ ] Make schema creation repeatable from a clean database.
-- [ ] Add automated tests for constraints and machine–order integrity.
+- [x] Separate schema definitions, optional demo data and negative test cases.
+- [x] Verify schema creation from a clean database manually.
+- [x] Add isolated automated tests for constraints and machine–order integrity.
+- [ ] Execute the automated suite and record its result in the project.
 - [ ] Document a complete, verified local setup.
 
 ### Phase 2 — Simulated industrial data
@@ -189,7 +190,13 @@ The deliverable for each phase is runnable code, a reproducible setup and eviden
 .
 ├── .gitignore
 ├── README.md
+├── TESTING.md
 ├── compose.yaml
+├── requirements-dev.txt
+├── seeds/
+│   └── demo_data.sql
+├── tests/
+│   └── test_database_integrity.py
 └── sql/
     ├── 001_create_machines.sql
     ├── 002_create_production_orders.sql
