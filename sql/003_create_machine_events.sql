@@ -19,5 +19,3 @@ create table if not exists machine_events (
 		(event_type <> 'PRODUCTION_REPORTED' and units_produced = 0)
 	)
 );
-
-select * from machine_events;

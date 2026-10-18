@@ -7,5 +7,3 @@ create table if not exists machines (
 	constraint pk_machine primary key (machine_id),
 	constraint uq_machine_code unique (machine_code)
 );
-
-select * from machines;

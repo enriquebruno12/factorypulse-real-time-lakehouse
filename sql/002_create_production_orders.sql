@@ -19,24 +19,3 @@ create table if not exists production_orders(
 	constraint ck_planned_end_at check (planned_end_at  > planned_start_at)
 	
 );
-
-select * from production_orders;
-
-select * from machines;
-
-insert into production_orders(order_code, machine_id, product_code, planned_quantity, planned_start_at, planned_end_at)
-	values
-	('PO-001',1,'P-100',5000,'2026-10-16','2026-10-22'),
-	('PO-002',1,'P-200',2500,'2026-10-18','2026-10-25'),
-	('PO-003',2,'P-300',8000,'2026-10-20','2026-10-27');
-
-select order_code, planned_quantity, produced_quantity, status, created_at
-from production_orders;
-
-insert into production_orders(order_code, machine_id, product_code, planned_quantity, produced_quantity, planned_start_at, planned_end_at)
-	values
-	('PO-004',2,'P-500',5000, 6000,'2026-10-20','2026-10-20');
-
-alter table production_orders
-add constraint uq_machine_order
-	unique (machine_id,order_id);
