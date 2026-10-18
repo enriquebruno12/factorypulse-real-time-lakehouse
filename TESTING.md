@@ -6,12 +6,28 @@ The tests build their own isolated schemas and do not depend on the seed file.
 
 ## Load demo data (optional)
 
-After applying `sql/001_create_machines.sql`,
-`sql/002_create_production_orders.sql`, and
-`sql/003_create_machine_events.sql` to a **fresh database**, run:
+Apply the three schema files in order to a **fresh database**. In Bash:
 
 ```bash
+for file in sql/001_create_machines.sql sql/002_create_production_orders.sql sql/003_create_machine_events.sql; do
+  docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U factorypulse -d factorypulse < "$file"
+done
 docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U factorypulse -d factorypulse < seeds/demo_data.sql
+```
+
+In PowerShell:
+
+```powershell
+@(
+    "sql/001_create_machines.sql",
+    "sql/002_create_production_orders.sql",
+    "sql/003_create_machine_events.sql"
+) | ForEach-Object {
+    Get-Content -Raw $_ | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U factorypulse -d factorypulse
+    if ($LASTEXITCODE -ne 0) { throw "Schema setup failed: $_" }
+}
+Get-Content -Raw seeds/demo_data.sql | docker compose exec -T postgres psql -v ON_ERROR_STOP=1 -U factorypulse -d factorypulse
+if ($LASTEXITCODE -ne 0) { throw "Demo seed failed" }
 ```
 
 Run the seed only once on a fresh database. It is intentionally not a schema
