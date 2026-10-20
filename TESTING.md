@@ -2,7 +2,8 @@
 
 FactoryPulse currently uses numbered SQL files applied manually in order. It does
 not yet use a migration framework. Use a fresh, disposable database when
-verifying the complete setup.
+verifying the complete setup. Editing a `CREATE TABLE IF NOT EXISTS` file
+changes new databases only; it does not remove columns from an existing one.
 
 | File | Purpose |
 | --- | --- |
