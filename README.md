@@ -103,12 +103,12 @@ erDiagram
 | Entity | Purpose | Key rules |
 | --- | --- | --- |
 | `machines` | Equipment master data | Generated primary key; unique machine code; required name |
-| `production_orders` | Product, planned quantity and schedule for a machine | Machine foreign key; positive planned quantity; nonnegative produced quantity; valid status; end after start |
+| `production_orders` | Product, planned quantity and schedule for a machine | Machine foreign key; positive planned quantity; valid status; end after start |
 | `machine_events` | Timestamped starts, stops, faults and production reports | Machine foreign key; matching machine–order pair; production reports require an order and positive units after 004 |
 
 Order statuses are `PLANNED`, `IN_PROGRESS`, `COMPLETED` and `CANCELLED`. Event types are `MACHINE_STARTED`, `MACHINE_STOPPED`, `PRODUCTION_REPORTED` and `FAULT_DETECTED`.
 
-The [data dictionary](docs/data_dictionary.md) documents each column and relationship. The [event contract](docs/event_contract.md) separates rules enforced by the database from sequence and state rules planned for the simulator. The [summary view](sql/005_create_order_production_summary_view.sql) calculates production totals from accepted report events; the stored `produced_quantity` column is not synchronized with those events.
+The [data dictionary](docs/data_dictionary.md) documents each column and relationship. The [event contract](docs/event_contract.md) separates rules enforced by the database from sequence and state rules planned for the simulator. The [summary view](sql/005_create_order_production_summary_view.sql) calculates production totals from accepted report events. `production_orders` stores the order plan and status, not a second copy of the calculated total.
 
 ### Event design decisions
 
@@ -147,7 +147,7 @@ The row-level rules above are enforced by PostgreSQL. Valid start/stop/fault seq
 
 PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volume for local persistence. The `.env` file is excluded from version control.
 
-> **Setup and verification:** apply all five numbered SQL files in numerical order to a fresh database. Optional data lives in `seeds/`, and SQL constraint checks use a separate `factorypulse_test` database. See [TESTING.md](TESTING.md). These scripts are not yet managed by a migration tool; automated CI execution is still planned.
+> **Setup and verification:** apply all five numbered SQL files in numerical order to a fresh database. Optional data lives in `seeds/`, and SQL constraint checks use a separate `factorypulse_test` database. See [TESTING.md](TESTING.md). These scripts are not yet managed by a migration tool; automated CI execution is still planned. Recreate a disposable database after changes to a creation script: rerunning `CREATE TABLE IF NOT EXISTS` does not change an existing table.
 
 ## Implementation plan
 
