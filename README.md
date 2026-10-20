@@ -163,7 +163,7 @@ PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volu
 - [ ] Build a configurable Python simulator with reproducible sample data.
 - [ ] Generate production increments, state changes and faults.
 - [ ] Introduce duplicates, late arrivals and invalid records for quality tests.
-- [ ] Record expected event semantics and sample outputs.
+- [ ] Complete and review the [event contract](docs/event_contract.md), then record expected sample outputs.
 
 ### Phase 3 — Ingestion and processing
 
@@ -192,6 +192,8 @@ The deliverable for each phase is runnable code, a reproducible setup and eviden
 ├── README.md
 ├── TESTING.md
 ├── compose.yaml
+├── docs/
+│   └── event_contract.md
 ├── seeds/
 │   └── demo_data.sql
 ├── tests/
