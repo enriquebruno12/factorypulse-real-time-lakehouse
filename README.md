@@ -10,7 +10,7 @@
 
 FactoryPulse models a realistic manufacturing data flow: operational records are generated, validated, ingested, transformed and ultimately made available for reporting. The project is being developed in stages so that each new tool has a clear role and a working result.
 
-> **Where the project stands:** PostgreSQL 17 runs locally with Docker Compose, and SQL files define the three operational entities. The SQL files contain only schema definitions. Optional demo data and SQL-only constraint checks are available; a managed migration workflow is still a future stage. The event simulator, Azure services, lakehouse, orchestration and dashboards are future stages.
+> **Where the project stands:** PostgreSQL 17 runs locally with Docker Compose, and SQL files define the three operational entities. The numbered SQL files define the operational tables, strengthen the production-report constraint, and create an order production summary view. Optional demo data and SQL-only checks are available; the files are applied manually in order, without a migration framework. The event simulator, Azure services, lakehouse, orchestration and dashboards are future stages.
 
 ## Why this project exists
 
@@ -31,8 +31,8 @@ This is a **synthetic-data portfolio project**, not a production factory system.
 | Area | Status | Evidence / next deliverable |
 | --- | --- | --- |
 | Local PostgreSQL environment | **Implemented** | [Docker Compose configuration](compose.yaml), health check, persistent volume |
-| Operational data model | **SQL files present** | [Machines](sql/001_create_machines.sql), [orders](sql/002_create_production_orders.sql), [events](sql/003_create_machine_events.sql) |
-| Database setup and verification | **Implemented locally** | Schema files are separate from [demo data](seeds/demo_data.sql); [SQL constraint checks](tests/test_constraints.sql) and [execution instructions](TESTING.md) are available |
+| Operational data model | **SQL files present** | [Machines](sql/001_create_machines.sql), [orders](sql/002_create_production_orders.sql), [events](sql/003_create_machine_events.sql), [production-report rule](sql/004_enforce_production_report_payload.sql), [order summary view](sql/005_create_order_production_summary_view.sql) |
+| Database setup and verification | **Implemented locally** | Numbered database files are separate from [demo data](seeds/demo_data.sql); [constraint checks](tests/test_constraints.sql), a [view result check](tests/test_order_production_summary.sql), and [execution instructions](TESTING.md) are available |
 | Operational documentation | **Proposed for review** | [Data dictionary](docs/data_dictionary.md) and [machine event contract](docs/event_contract.md), aligned with the current SQL and explicit about proposed rules |
 | Event simulation | Planned | Python generator for starts, stops, faults and incremental production |
 | Batch and streaming ingestion | Planned | Azure Data Factory and Azure Event Hubs pipelines |
@@ -72,7 +72,7 @@ flowchart LR
 
 | Technology / practice | Role in FactoryPulse | Status |
 | --- | --- | --- |
-| SQL + PostgreSQL 17 | Operational schema, constraints and queries | **In use** |
+| SQL + PostgreSQL 17 | Operational schema, constraints, view and queries | **In use** |
 | Docker + Docker Compose | Reproducible local database and persistent storage | **In use** |
 | Git + GitHub | Version control and project documentation | **In use** |
 | Python | Synthetic event generation and ingestion utilities | Planned |
@@ -104,20 +104,20 @@ erDiagram
 | --- | --- | --- |
 | `machines` | Equipment master data | Generated primary key; unique machine code; required name |
 | `production_orders` | Product, planned quantity and schedule for a machine | Machine foreign key; positive planned quantity; nonnegative produced quantity; valid status; end after start |
-| `machine_events` | Timestamped starts, stops, faults and production reports | Machine foreign key; optional order; machine–order match; event-specific production quantity |
+| `machine_events` | Timestamped starts, stops, faults and production reports | Machine foreign key; matching machine–order pair; production reports require an order and positive units after 004 |
 
 Order statuses are `PLANNED`, `IN_PROGRESS`, `COMPLETED` and `CANCELLED`. Event types are `MACHINE_STARTED`, `MACHINE_STOPPED`, `PRODUCTION_REPORTED` and `FAULT_DETECTED`.
 
-The [data dictionary](docs/data_dictionary.md) documents each column and relationship. The [event contract](docs/event_contract.md) proposes how the future simulator should generate each event and identifies rules that the current SQL does not yet enforce.
+The [data dictionary](docs/data_dictionary.md) documents each column and relationship. The [event contract](docs/event_contract.md) separates rules enforced by the database from sequence and state rules planned for the simulator. The [summary view](sql/005_create_order_production_summary_view.sql) calculates production totals from accepted report events; the stored `produced_quantity` column is not synchronized with those events.
 
 ### Event design decisions
 
 - **Production is incremental.** Reports of 300 and 450 units contribute 750 units, rather than representing two cumulative readings.
 - **State changes are distinct from output.** Starts, stops and faults carry zero `units_produced`.
-- **An order is optional for an event.** A machine can fault or stop without an active production order.
+- **An order is optional for starts, stops and faults.** A production report must identify its order.
 - **An order must belong to the event's machine.** The composite foreign key prevents mismatched attribution.
 
-These rules live in PostgreSQL so that writers cannot bypass them merely by using a different application or script.
+The row-level rules above are enforced by PostgreSQL. Valid start/stop/fault sequences and order status at report time are not yet enforced.
 
 ## Run the current stage locally
 
@@ -147,7 +147,7 @@ These rules live in PostgreSQL so that writers cannot bypass them merely by usin
 
 PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volume for local persistence. The `.env` file is excluded from version control.
 
-> **Setup and verification:** apply the three schema files in numerical order to a fresh database. Optional data lives in `seeds/`, and SQL constraint checks use a separate `factorypulse_test` database. See [TESTING.md](TESTING.md). These scripts are not yet managed by a migration tool; automated CI execution is still planned.
+> **Setup and verification:** apply all five numbered SQL files in numerical order to a fresh database. Optional data lives in `seeds/`, and SQL constraint checks use a separate `factorypulse_test` database. See [TESTING.md](TESTING.md). These scripts are not yet managed by a migration tool; automated CI execution is still planned.
 
 ## Implementation plan
 
@@ -158,6 +158,7 @@ PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volu
 - [x] Separate schema definitions, optional demo data and negative test cases.
 - [x] Verify schema creation from a clean database manually.
 - [x] Add SQL-only checks for constraints and machine–order integrity.
+- [x] Require an order and positive units for production reports; add an order production summary view and a manual result check.
 - [x] Execute the checks in a temporary PostgreSQL 17 container and confirm that test rows are rolled back.
 - [ ] Document a complete, verified local setup.
 
@@ -201,11 +202,14 @@ The deliverable for each phase is runnable code, a reproducible setup and eviden
 ├── seeds/
 │   └── demo_data.sql
 ├── tests/
-│   └── test_constraints.sql
+│   ├── test_constraints.sql
+│   └── test_order_production_summary.sql
 └── sql/
     ├── 001_create_machines.sql
     ├── 002_create_production_orders.sql
-    └── 003_create_machine_events.sql
+    ├── 003_create_machine_events.sql
+    ├── 004_enforce_production_report_payload.sql
+    └── 005_create_order_production_summary_view.sql
 ```
 
 Only existing files are shown here. New directories will be added as their stages are implemented.
