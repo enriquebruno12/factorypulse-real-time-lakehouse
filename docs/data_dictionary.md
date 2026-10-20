@@ -2,7 +2,7 @@
 
 **Status:** Proposed for review · **Version:** 0.1 · **Date:** 20 October 2026  
 **Scope:** Current PostgreSQL operational schema for a synthetic manufacturing scenario.  
-**SQL sources:** [machines](../sql/001_create_machines.sql), [production orders](../sql/002_create_production_orders.sql), [machine events](../sql/003_create_machine_events.sql).
+**SQL sources:** [machines](../sql/001_create_machines.sql), [production orders](../sql/002_create_production_orders.sql), [machine events](../sql/003_create_machine_events.sql), [production-report rule](../sql/004_enforce_production_report_payload.sql), and [order summary view](../sql/005_create_order_production_summary_view.sql).
 
 This dictionary separates rules already enforced by the SQL from business decisions proposed for the future simulator. It does not describe an actual factory.
 
@@ -45,10 +45,10 @@ The pair (`machine_id`, `order_id`) is also unique (`uq_machine_order`). As `ord
 | --- | --- | --- | --- |
 | `event_id` | `integer` | Generated identity; primary key (`pk_events`). | Database row identifier, not a source event ID or deduplication key. |
 | `machine_id` | `integer` | Required; foreign key (`fk_machine`) to `machines.machine_id`. | Machine associated with the event. |
-| `order_id` | `integer` | Optional; with `machine_id`, foreign key (`fk_machine_order`) to `production_orders(machine_id, order_id)` when supplied. | Related order if known; SQL permits NULL for every event type. |
+| `order_id` | `integer` | Nullable for nonproduction events; required for production reports after 004. With `machine_id`, foreign key (`fk_machine_order`) to `production_orders(machine_id, order_id)` when supplied. | Related order if known; SQL permits NULL for starts, stops and faults; 004 requires an order for production reports. |
 | `event_type` | `varchar(20)` | Required; one of `MACHINE_STARTED`, `MACHINE_STOPPED`, `PRODUCTION_REPORTED`, `FAULT_DETECTED` (`ck_event`). | Kind of occurrence. |
 | `event_at` | `timestamptz` | Required. | Occurrence time; no ordering or future-time check. |
-| `units_produced` | `integer` | Required; default `0`; at least zero for production reports, exactly zero otherwise (`ck_units`). | Incremental unit count; SQL accepts zero-unit production reports. |
+| `units_produced` | `integer` | Required; default `0`; greater than zero for production reports after 004, exactly zero otherwise (`ck_units`). | Incremental unit count; zero-unit production reports are rejected after 004. |
 | `created_at` | `timestamptz` | Required; defaults to `current_timestamp`. | Row creation time when default is used, potentially later than `event_at`. |
 
 ## Relationships and time semantics
@@ -57,13 +57,11 @@ The pair (`machine_id`, `order_id`) is also unique (`uq_machine_order`). As `ord
 - An event has exactly one existing machine and may have one order. When `order_id` is supplied, the composite foreign key requires that order to belong to the event's machine. With `order_id = NULL`, only the machine relationship applies.
 - `timestamptz` represents an instant; PostgreSQL displays it in the session time zone. The original source offset is not retained in this schema. UTC is the proposed simulator convention.
 
-## Proposed decisions to review
+## Implemented derived total and remaining decisions
 
-1. Require an order and a positive increment for `PRODUCTION_REPORTED`.
-2. Require the linked order to be `IN_PROGRESS` when production is reported.
-3. Decide whether `produced_quantity` is written by the application or derived from valid event increments, and how discrepancies are resolved.
-4. Add a stable source event ID before deduplication; define late-event handling.
-5. Decide whether inactive machines may receive orders or emit events, and how faults affect machine state.
+- File 004 requires an order and a positive increment for `PRODUCTION_REPORTED`.
+- The [order summary view](../sql/005_create_order_production_summary_view.sql) sums accepted production increments, with zero for orders without reports. It does not update the stored `produced_quantity` column; that column may disagree with the view.
+- Still to implement: order status validation at report time; machine-state sequences; stable source event IDs, duplicate and late-event handling; and a policy for inactive machines.
 
-See the companion event contract for detailed proposed behavior. These five rules are **not** guaranteed by the current SQL.
+See the companion [event contract](event_contract.md) for detailed behavior and the distinction between implemented and planned rules.
 
