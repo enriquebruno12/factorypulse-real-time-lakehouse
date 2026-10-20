@@ -1,14 +1,12 @@
 -- 002: Create production orders after machines.
 -- Every order belongs to one machine and has a positive target and valid schedule.
+-- Production totals are derived from machine_events by the view in 005.
 create table if not exists production_orders(
 	order_id integer generated always as identity,
 	order_code varchar(6) not null unique,
 	machine_id integer not null,
 	product_code varchar(20) not null,
 	planned_quantity integer not null,
-	-- Stored field from the original model; it is not synchronized with events.
-	-- Use vw_order_production_summary (005) for the event-derived total.
-	produced_quantity integer not null default 0,
 	status varchar(11) not null default 'PLANNED',
 	planned_start_at timestamptz not null,
 	planned_end_at timestamptz not null,
@@ -20,7 +18,6 @@ create table if not exists production_orders(
 		references machines(machine_id),
 	-- A production plan must target at least one unit.
 	constraint ck_planned_quantity check (planned_quantity > 0),
-	constraint ck_produced_quantity check (produced_quantity >= 0),
 	-- Restrict the administrative lifecycle to known status values.
 	constraint ck_status check (status in ('PLANNED','IN_PROGRESS','COMPLETED','CANCELLED')),
 	-- The planned end must occur after the planned start.
