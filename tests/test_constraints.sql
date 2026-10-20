@@ -1,4 +1,4 @@
--- Run only against a disposable database after sql/001, 002 and 003.
+-- Run only against a disposable database after sql/001, 002, 003 and 004.
 -- psql -v ON_ERROR_STOP=1 -f tests/test_constraints.sql
 -- Expected constraint errors are caught and checked by name.
 -- The transaction is rolled back, so this file leaves no test rows behind.
@@ -194,6 +194,40 @@ BEGIN
             RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
         END IF;
         RAISE NOTICE 'PASS: negative production increment rejected';
+    END;
+    
+    BEGIN
+        INSERT INTO machine_events (
+            machine_id, order_id, event_type, event_at, units_produced
+        )
+        VALUES (
+            machine_a, null, 'PRODUCTION_REPORTED',
+            TIMESTAMPTZ '2026-10-19 09:00:00+00', 100
+        );
+        RAISE EXCEPTION 'FAIL: event with no order accepted';
+    EXCEPTION WHEN check_violation THEN
+        GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
+        IF actual_constraint IS DISTINCT FROM 'ck_units' THEN
+            RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
+        END IF;
+        RAISE NOTICE 'PASS: event with no order rejected';
+    END;
+    
+    BEGIN
+        INSERT INTO machine_events (
+            machine_id, order_id, event_type, event_at, units_produced
+        )
+        VALUES (
+            machine_a, order_a, 'PRODUCTION_REPORTED',
+            TIMESTAMPTZ '2026-10-19 09:00:00+00', 0
+        );
+        RAISE EXCEPTION 'FAIL: production reported with no units produced accepted';
+    EXCEPTION WHEN check_violation THEN
+        GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
+        IF actual_constraint IS DISTINCT FROM 'ck_units' THEN
+            RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
+        END IF;
+        RAISE NOTICE 'PASS: production reported with no units produced rejected';
     END;
 END;
 $test$;
