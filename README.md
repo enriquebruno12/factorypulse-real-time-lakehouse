@@ -33,6 +33,7 @@ This is a **synthetic-data portfolio project**, not a production factory system.
 | Local PostgreSQL environment | **Implemented** | [Docker Compose configuration](compose.yaml), health check, persistent volume |
 | Operational data model | **SQL files present** | [Machines](sql/001_create_machines.sql), [orders](sql/002_create_production_orders.sql), [events](sql/003_create_machine_events.sql) |
 | Database setup and verification | **Implemented locally** | Schema files are separate from [demo data](seeds/demo_data.sql); [SQL constraint checks](tests/test_constraints.sql) and [execution instructions](TESTING.md) are available |
+| Operational documentation | **Proposed for review** | [Data dictionary](docs/data_dictionary.md) and [machine event contract](docs/event_contract.md), aligned with the current SQL and explicit about proposed rules |
 | Event simulation | Planned | Python generator for starts, stops, faults and incremental production |
 | Batch and streaming ingestion | Planned | Azure Data Factory and Azure Event Hubs pipelines |
 | Lakehouse transformations | Planned | ADLS Gen2, Databricks/PySpark, Delta Lake and Bronze/Silver/Gold datasets |
@@ -106,6 +107,8 @@ erDiagram
 | `machine_events` | Timestamped starts, stops, faults and production reports | Machine foreign key; optional order; machine–order match; event-specific production quantity |
 
 Order statuses are `PLANNED`, `IN_PROGRESS`, `COMPLETED` and `CANCELLED`. Event types are `MACHINE_STARTED`, `MACHINE_STOPPED`, `PRODUCTION_REPORTED` and `FAULT_DETECTED`.
+
+The [data dictionary](docs/data_dictionary.md) documents each column and relationship. The [event contract](docs/event_contract.md) proposes how the future simulator should generate each event and identifies rules that the current SQL does not yet enforce.
 
 ### Event design decisions
 
@@ -193,6 +196,7 @@ The deliverable for each phase is runnable code, a reproducible setup and eviden
 ├── TESTING.md
 ├── compose.yaml
 ├── docs/
+│   ├── data_dictionary.md
 │   └── event_contract.md
 ├── seeds/
 │   └── demo_data.sql
