@@ -29,7 +29,6 @@ This dictionary separates rules already enforced by the SQL from business decisi
 | `machine_id` | `integer` | Required; foreign key (`fk_machines`) to `machines.machine_id`. | Assigned machine. |
 | `product_code` | `varchar(20)` | Required. | Product identifier as text; no product master table or format check. |
 | `planned_quantity` | `integer` | Required; greater than zero (`ck_planned_quantity`). | Target number of units. |
-| `produced_quantity` | `integer` | Required; default `0`; at least zero (`ck_produced_quantity`). | Stored production total; current SQL does not update or reconcile it from events. |
 | `status` | `varchar(11)` | Required; default `PLANNED`; one of `PLANNED`, `IN_PROGRESS`, `COMPLETED`, `CANCELLED` (`ck_status`). | Administrative order status; events do not automatically change it. |
 | `planned_start_at` | `timestamptz` | Required. | Planned start instant. |
 | `planned_end_at` | `timestamptz` | Required; later than `planned_start_at` (`ck_planned_end_at`). | Planned end instant; actual completion is not represented. |
@@ -60,7 +59,7 @@ The pair (`machine_id`, `order_id`) is also unique (`uq_machine_order`). As `ord
 ## Implemented derived total and remaining decisions
 
 - File 004 requires an order and a positive increment for `PRODUCTION_REPORTED`.
-- The [order summary view](../sql/005_create_order_production_summary_view.sql) sums accepted production increments, with zero for orders without reports. It does not update the stored `produced_quantity` column; that column may disagree with the view.
+- The [order summary view](../sql/005_create_order_production_summary_view.sql) is the source for produced totals: it sums accepted production increments and returns zero for orders without reports. The `production_orders` table has no separate produced-total column.
 - Still to implement: order status validation at report time; machine-state sequences; stable source event IDs, duplicate and late-event handling; and a policy for inactive machines.
 
 See the companion [event contract](event_contract.md) for detailed behavior and the distinction between implemented and planned rules.
