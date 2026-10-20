@@ -48,7 +48,7 @@ All times are UTC. These are examples, not rows already inserted into the projec
 | 09:01 | `MACHINE_STOPPED` | 1 | 1 | 0 | Running interval ends. |
 | 09:30 | `MACHINE_STARTED` | 1 | 1 | 0 | Work resumes after recovery. |
 
-The [summary view](../sql/005_create_order_production_summary_view.sql) would show 75 units for this order. The database does **not** automatically set `production_orders.produced_quantity` to 75.
+The [summary view](../sql/005_create_order_production_summary_view.sql) would show 75 units for this order. The total is calculated from events rather than stored in `production_orders`.
 
 ## Validation and quality boundaries
 
@@ -60,12 +60,12 @@ The [summary view](../sql/005_create_order_production_summary_view.sql) would sh
 | Valid start/stop/fault sequence; no output while stopped | No | Simulator state machine and downstream checks. |
 | Stable source event identity and deduplication | No | Future raw event envelope and pipeline. |
 | Late, duplicate or invalid input classification | No | Preserve in raw stream or staging and quarantine before curated data; current SQL rejects many invalid rows. |
-| Event-derived order total | Yes, in the summary view | Decide how to retire or reconcile the separate stored `produced_quantity` field. |
+| Event-derived order total | Yes, in the summary view | Use this view for reporting; no duplicate total is stored in `production_orders`. |
 
 ## Decisions to review before simulation
 
 1. Implemented: every production report has an order and at least one unit (004).
-2. Implemented for reporting: accepted event increments define the total in the summary view (005); the stored `produced_quantity` field remains unresolved.
+2. Implemented for reporting: accepted event increments define the total in the summary view (005); `production_orders` has no duplicate total field.
 3. Planned simulator behavior: a production-interrupting fault is followed by a stop; production resumes only after a later start. SQL does not yet enforce this sequence.
 4. Decide what stable source event ID identifies duplicates.
 5. Decide how late an event may arrive and which records should be quarantined.
