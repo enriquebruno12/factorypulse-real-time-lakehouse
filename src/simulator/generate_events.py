@@ -31,6 +31,13 @@ def validate_sequence(events):
         if event['offset_minutes'] < 0:
             raise ValueError(f'offset must be 0 or greater. Event number {event_number}')
 
+        if event['event_type'] in ('MACHINE_STARTED', 'MACHINE_STOPPED', 'FAULT_DETECTED') and event['units_produced']!= 0:
+            raise ValueError(f'units produced different from 0 only possible when event type is PRODUCTION_REPORTED. Event number {event_number}')
+
+        if event['event_type'] == 'PRODUCTION_REPORTED' and event['units_produced'] <=0:
+            raise ValueError(f'units produced must be greater than 0 when event type is PRODUCTION_REPORTED. Event number {event_number}')
+
+
         if event['event_type'] == 'MACHINE_STARTED':
             current_state = 'RUNNING'
         elif event['event_type'] == 'FAULT_DETECTED':
