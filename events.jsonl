@@ -1,0 +1,7 @@
+﻿{"machine_code": "M-001", "event_type": "MACHINE_STARTED", "units_produced": 0, "order_code": "PO-001", "source_event_id": "EVT-001", "event_at": "2026-10-21T08:00:00+00:00"}
+{"machine_code": "M-001", "event_type": "PRODUCTION_REPORTED", "units_produced": 25, "order_code": "PO-001", "source_event_id": "EVT-002", "event_at": "2026-10-21T08:30:00+00:00"}
+{"machine_code": "M-001", "event_type": "FAULT_DETECTED", "units_produced": 0, "order_code": "PO-001", "source_event_id": "EVT-003", "event_at": "2026-10-21T09:00:00+00:00"}
+{"machine_code": "M-001", "event_type": "MACHINE_STOPPED", "units_produced": 0, "order_code": "PO-001", "source_event_id": "EVT-004", "event_at": "2026-10-21T09:01:00+00:00"}
+{"machine_code": "M-001", "event_type": "MACHINE_STARTED", "units_produced": 0, "order_code": "PO-001", "source_event_id": "EVT-005", "event_at": "2026-10-21T09:30:00+00:00"}
+{"machine_code": "M-001", "event_type": "PRODUCTION_REPORTED", "units_produced": 10, "order_code": "PO-001", "source_event_id": "EVT-006", "event_at": "2026-10-21T10:00:00+00:00"}
+{"machine_code": "M-001", "event_type": "MACHINE_STOPPED", "units_produced": 0, "order_code": "PO-001", "source_event_id": "EVT-007", "event_at": "2026-10-21T10:30:00+00:00"}

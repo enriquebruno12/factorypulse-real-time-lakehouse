@@ -29,3 +29,12 @@ class TestGenerateEvents(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError,'cannot start machine from FAULTED'):
             validate_sequence(events)
+
+    def test_invalid_offset_minutes(self):
+        events = [
+                    {'machine_code':'M-001','event_type':'MACHINE_STARTED','units_produced':0, 'offset_minutes':0},
+                    {'machine_code':'M-001','event_type':'PRODUCTION_REPORTED','units_produced':30, 'offset_minutes':0}
+                ]
+
+        with self.assertRaisesRegex(ValueError,'offset must be greater than'):
+            validate_sequence(events)
