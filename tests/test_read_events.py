@@ -4,8 +4,10 @@ from tempfile import TemporaryDirectory
 
 from src.ingestion.read_events import read_events
 
+# Exercise malformed input without keeping fixture files in the repository.
 class TestReadEvents(unittest.TestCase):
 
+    # Syntax errors report the line containing malformed JSON.
     def test_invalid_json_line(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -24,6 +26,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'line 2'):
                 read_events(path)
 
+    # JSON scalars are valid JSON but are not event objects.
     def test_invalid_json_event(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -42,8 +45,9 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'line 2 must be a Dict type'):
                 read_events(path)
 
+    # Event objects must include every required payload field.
     def test_invalid_fields(self):
-         with TemporaryDirectory() as directory:
+        with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
 
             path.write_text(

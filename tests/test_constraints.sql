@@ -12,6 +12,7 @@ DECLARE
     machine_a integer;
     machine_b integer;
     order_a integer;
+    -- Holds the name reported by PostgreSQL for each expected failure.
     actual_constraint text;
 BEGIN
     -- Arrange two machines and one order for the positive and negative cases.

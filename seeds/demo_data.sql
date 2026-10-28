@@ -29,6 +29,8 @@ VALUES
         TIMESTAMPTZ '2026-10-19 17:00:00+00'
     );
 
+-- The following inserts resolve machine/order IDs from business codes, so seed data
+-- does not depend on generated identity values.
 INSERT INTO machine_events (
     machine_id, order_id, event_type, event_at, units_produced
 )

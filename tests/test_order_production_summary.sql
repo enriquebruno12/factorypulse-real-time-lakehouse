@@ -58,6 +58,7 @@ FROM production_orders
 WHERE order_code = 'V9001';
 
 -- Inspect both orders; LEFT JOIN plus COALESCE keeps V9002 at zero.
+-- These rows are inspected manually; this script does not assert the totals.
 SELECT order_code, total_units_produced
 FROM vw_order_production_summary
 WHERE order_code IN ('V9001', 'V9002')
