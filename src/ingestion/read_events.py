@@ -6,11 +6,23 @@ def read_events(file_path):
     events = []
 
     with path.open('r',encoding='utf-8-sig') as file:
-        for line in file:
-            events.append(json.loads(line))
+        for line_number, line in enumerate(file,start=1):
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError as error:
+                raise ValueError(
+                    f'Invalid JSON within file {path}, line {line_number}'
+                ) from error
+            if not isinstance(event,dict):
+                raise ValueError(f'JSON event in file {path}, line {line_number} must be a Dict type')
+            events.append(event)
     return events
 
-events = read_events('./events.jsonl')
+def main():
+    events = read_events('./events.jsonl')
+    print(len(events))
+    print(events[1]['units_produced'])
 
-print(len(events))
-print(events[1]['units_produced'])
+
+if __name__ == '__main__':
+    main()
