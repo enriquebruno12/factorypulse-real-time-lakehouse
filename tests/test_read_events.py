@@ -162,8 +162,59 @@ class TestReadEvents(unittest.TestCase):
                 '"units_produced":0}\n',
                 encoding='utf-8'
             )
-            
+
             events = read_events(path)
 
             self.assertEqual (len(events),1)
             self.assertEqual(events[0]['event_at'], timestamp)
+
+    def test_invalid_event_type(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'invalid.jsonl'
+
+            path.write_text(
+                '{"order_code":"PO-001",'
+                '"source_event_id":"EVT-001",'
+                '"machine_code":"M-001",'
+                '"event_type":"MACHINE_PAUSED",'
+                '"event_at":"2026-10-21T08:00:00+00:00",'
+                '"units_produced":0}\n',
+                encoding='utf-8'
+            )
+
+            with self.assertRaisesRegex(ValueError, 'expected one of the following:.*line 1'):
+                read_events(path)
+
+    def test_stop_event_rejects_negative_units(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'invalid.jsonl'
+
+            path.write_text(
+                '{"order_code":"PO-001",'
+                '"source_event_id":"EVT-001",'
+                '"machine_code":"M-001",'
+                '"event_type":"MACHINE_STOPPED",'
+                '"event_at":"2026-10-21T08:00:00+00:00",'
+                '"units_produced":-1}\n',
+                encoding='utf-8'
+            )
+
+            with self.assertRaisesRegex(ValueError, 'has to have 0 as units produced'):
+                read_events(path)
+
+    def test_production_report_rejects_zero_units(self):
+        with TemporaryDirectory() as directory:
+            path = Path(directory) / 'invalid.jsonl'
+
+            path.write_text(
+                '{"order_code":"PO-001",'
+                '"source_event_id":"EVT-001",'
+                '"machine_code":"M-001",'
+                '"event_type":"PRODUCTION_REPORTED",'
+                '"event_at":"2026-10-21T08:00:00+00:00",'
+                '"units_produced":0}\n',
+                encoding='utf-8'
+            )
+
+            with self.assertRaisesRegex(ValueError, 'must have units produced greater than 0'):
+                read_events(path)

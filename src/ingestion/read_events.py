@@ -16,6 +16,8 @@ def read_events(file_path):
         'units_produced'
     ]
 
+    event_types_allowed = ['MACHINE_STARTED', 'PRODUCTION_REPORTED', 'FAULT_DETECTED', 'MACHINE_STOPPED']
+
     with path.open('r',encoding='utf-8-sig') as file:
         for line_number, line in enumerate(file,start=1):
             # Parse one JSON document per line while preserving its line number.
@@ -54,7 +56,17 @@ def read_events(file_path):
 
                     if parsed_date.tzinfo is None:
                         raise ValueError(f'{field} must include timezone, line {line_number}')
-                    
+
+                if field == 'event_type':
+                    if value not in event_types_allowed:
+                        raise ValueError(f'{field} received {value}, expected one of the following:' 
+                                         f'[MACHINE_STARTED, PRODUCTION_REPORTED, FAULT_DETECTED, MACHINE_STOPPED], line {line_number}')
+
+            if event['event_type'] == 'PRODUCTION_REPORTED' and event['units_produced'] <=0:
+                raise ValueError(f'{field} must have units produced greater than 0, line number {line_number}')
+            elif event['event_type'] in ['MACHINE_STARTED', 'FAULT_DETECTED','MACHINE_STOPPED'] and event['units_produced'] != 0:
+                raise ValueError(f'{event['event_type']} has to have 0 as units produced , line number {line_number}')
+
             events.append(event)
 
     return events
