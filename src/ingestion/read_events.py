@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from datetime import datetime
 
 # Read newline-delimited JSON and report input errors with their source line.
 def read_events(file_path):
@@ -30,9 +31,30 @@ def read_events(file_path):
 
             # Reject incomplete records before handing them to later stages.
             for field in required_fields:
+
                 if field not in event:
                     raise ValueError(f'JSON file is missing field {field}, line {line_number}.')
-            
+
+                value = event[field]
+                
+                if field == 'units_produced':
+                    if type(value) is not int:
+                        raise ValueError(f'{field} has to have a int value, line {line_number}')
+                else:
+                    if not isinstance(value, str):
+                        raise ValueError(f'{field} must be str type, line {line_number}.')
+                    if not value.strip():
+                        raise ValueError(f'{field} cannot be empty, line {line_number}')
+
+                if field == 'event_at':
+                    try:
+                        parsed_date = datetime.fromisoformat(value)
+                    except ValueError as error:
+                        raise ValueError (f'Invalid {field}, line {line_number}: {value}') from error
+
+                    if parsed_date.tzinfo is None:
+                        raise ValueError(f'{field} must include timezone, line {line_number}')
+                    
             events.append(event)
 
     return events
