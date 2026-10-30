@@ -8,6 +8,4 @@ from production_orders o
 -- Keep orders with no matching production report.
 left join machine_events e
     on o.order_id = e.order_id
-    -- Filter in ON so orders with no production remain in the result.
-    and e.event_type = 'PRODUCTION_REPORTED'
 group by o.order_id;

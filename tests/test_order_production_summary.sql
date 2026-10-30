@@ -33,28 +33,28 @@ FROM machines
 WHERE machine_code = 'VW-TEST-1';
 
 INSERT INTO machine_events (
-    machine_id, order_id, event_type, event_at, units_produced
+    machine_id, order_id, source_event_id, event_type, event_at, units_produced
 )
 -- A state event contributes no production units.
-SELECT machine_id, order_id, 'MACHINE_STARTED',
+SELECT machine_id, order_id, 'DEMO-EVT-999', 'MACHINE_STARTED',
        TIMESTAMPTZ '2026-10-19 08:00:00+00', 0
 FROM production_orders
 WHERE order_code = 'V9001';
 
 INSERT INTO machine_events (
-    machine_id, order_id, event_type, event_at, units_produced
+    machine_id, order_id, source_event_id, event_type, event_at, units_produced
 )
 -- First incremental report: 25 units.
-SELECT machine_id, order_id, 'PRODUCTION_REPORTED',
+SELECT machine_id, order_id, 'DEMO-EVT-998', 'PRODUCTION_REPORTED',
        TIMESTAMPTZ '2026-10-19 09:00:00+00', 25
 FROM production_orders
 WHERE order_code = 'V9001';
 
 INSERT INTO machine_events (
-    machine_id, order_id, event_type, event_at, units_produced
+    machine_id, order_id, source_event_id, event_type, event_at, units_produced
 )
 -- Second incremental report: 10 more units, for a total of 35.
-SELECT machine_id, order_id, 'PRODUCTION_REPORTED',
+SELECT machine_id, order_id, 'DEMO-EVT-997', 'PRODUCTION_REPORTED',
        TIMESTAMPTZ '2026-10-19 10:00:00+00', 10
 FROM production_orders
 WHERE order_code = 'V9001';
