@@ -5,6 +5,7 @@ create table if not exists machine_events (
     machine_id integer not null,
     -- Optional for start, stop and fault events; 004 requires it for production reports.
     order_id integer,
+    source_event_id varchar(20) not null,
     event_type varchar(20) not null,
     -- Store the occurrence time separately from the row creation time.
     event_at timestamptz not null,
@@ -18,6 +19,7 @@ create table if not exists machine_events (
     -- If an order is supplied, it must belong to this same machine.
     constraint fk_machine_order foreign key (machine_id,order_id)
         references production_orders (machine_id,order_id),
+    constraint uq_source_event_id unique (source_event_id),
     -- Reject event types outside the supported four.
     constraint ck_event check (event_type in ('MACHINE_STARTED','MACHINE_STOPPED','PRODUCTION_REPORTED','FAULT_DETECTED')),
     -- Starts, stops and faults carry zero units; 004 tightens production reports.

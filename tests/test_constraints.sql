@@ -37,10 +37,10 @@ BEGIN
 
     -- Positive control: valid machine/order pair and positive production increment.
     INSERT INTO machine_events (
-        machine_id, order_id, event_type, event_at, units_produced
+    machine_id, order_id, source_event_id, event_type, event_at, units_produced
     )
     VALUES (
-        machine_a, order_a, 'PRODUCTION_REPORTED',
+        machine_a, order_a, 'DEMO-EVT-010', 'PRODUCTION_REPORTED',
         TIMESTAMPTZ '2026-10-19 09:00:00+00', 25
     );
     RAISE NOTICE 'PASS: valid machine, order and event';
@@ -141,10 +141,10 @@ BEGIN
     -- Test 06 / fk_machine_order: an event cannot link an order to the wrong machine.
     BEGIN
         INSERT INTO machine_events (
-            machine_id, order_id, event_type, event_at, units_produced
+            machine_id, order_id, source_event_id, event_type, event_at, units_produced
         )
         VALUES (
-            machine_b, order_a, 'MACHINE_STARTED',
+            machine_b, order_a, 'DEMO-EVT-002', 'MACHINE_STARTED',
             TIMESTAMPTZ '2026-10-19 09:00:00+00', 0
         );
         RAISE EXCEPTION 'FAIL: event with another machine''s order was accepted';
@@ -159,10 +159,10 @@ BEGIN
     -- Test 07 / ck_event: an unknown event type is not allowed.
     BEGIN
         INSERT INTO machine_events (
-            machine_id, event_type, event_at, units_produced
+            machine_id, source_event_id, event_type, event_at, units_produced
         )
         VALUES (
-            machine_a, 'UNKNOWN',
+            machine_a, 'DEMO-EVT-003', 'UNKNOWN',
             TIMESTAMPTZ '2026-10-19 09:00:00+00', 0
         );
         RAISE EXCEPTION 'FAIL: unknown event type was accepted';
@@ -177,10 +177,10 @@ BEGIN
     -- Test 08 / ck_units: a stop event cannot report produced units.
     BEGIN
         INSERT INTO machine_events (
-            machine_id, event_type, event_at, units_produced
+            machine_id, source_event_id, event_type, event_at, units_produced
         )
         VALUES (
-            machine_a, 'MACHINE_STOPPED',
+            machine_a, 'DEMO-EVT-004', 'MACHINE_STOPPED',
             TIMESTAMPTZ '2026-10-19 09:00:00+00', 10
         );
         RAISE EXCEPTION 'FAIL: stop event with units was accepted';
@@ -195,10 +195,10 @@ BEGIN
     -- Test 09 / ck_units: a production increment cannot be negative.
     BEGIN
         INSERT INTO machine_events (
-            machine_id, order_id, event_type, event_at, units_produced
+            machine_id, order_id, source_event_id, event_type, event_at, units_produced
         )
         VALUES (
-            machine_a, order_a, 'PRODUCTION_REPORTED',
+            machine_a, order_a, 'DEMO-EVT-005', 'PRODUCTION_REPORTED',
             TIMESTAMPTZ '2026-10-19 09:00:00+00', -1
         );
         RAISE EXCEPTION 'FAIL: negative production increment was accepted';
@@ -209,14 +209,14 @@ BEGIN
         END IF;
         RAISE NOTICE 'PASS: negative production increment rejected';
     END;
-    
+    	
     -- Test 10 / ck_units: a production report must identify its order (004).
     BEGIN
         INSERT INTO machine_events (
-            machine_id, order_id, event_type, event_at, units_produced
+            machine_id, order_id, source_event_id, event_type, event_at, units_produced
         )
         VALUES (
-            machine_a, null, 'PRODUCTION_REPORTED',
+            machine_a, null, 'DEMO-EVT-006', 'PRODUCTION_REPORTED',
             TIMESTAMPTZ '2026-10-19 09:00:00+00', 100
         );
         RAISE EXCEPTION 'FAIL: event with no order accepted';
@@ -231,10 +231,10 @@ BEGIN
     -- Test 11 / ck_units: a production report must contain at least one unit (004).
     BEGIN
         INSERT INTO machine_events (
-            machine_id, order_id, event_type, event_at, units_produced
+            machine_id, order_id, source_event_id, event_type, event_at, units_produced
         )
         VALUES (
-            machine_a, order_a, 'PRODUCTION_REPORTED',
+            machine_a, order_a, 'DEMO-EVT-007', 'PRODUCTION_REPORTED',
             TIMESTAMPTZ '2026-10-19 09:00:00+00', 0
         );
         RAISE EXCEPTION 'FAIL: production reported with no units produced accepted';
@@ -244,6 +244,23 @@ BEGIN
             RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
         END IF;
         RAISE NOTICE 'PASS: production reported with no units produced rejected';
+    END;
+    
+    BEGIN
+        INSERT INTO machine_events (
+            machine_id, order_id, source_event_id, event_type, event_at, units_produced
+        )
+        VALUES (
+            machine_a, order_a, 'DEMO-EVT-010', 'PRODUCTION_REPORTED',
+            TIMESTAMPTZ '2026-10-19 09:00:00+00', 10
+        );
+        RAISE EXCEPTION 'FAIL: duplicate source_event_id accepted';
+    EXCEPTION WHEN unique_violation THEN
+        GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
+        IF actual_constraint IS DISTINCT FROM 'uq_source_event_id' THEN
+            RAISE EXCEPTION 'FAIL: expected uq_source_event_id, got %', actual_constraint;
+        END IF;
+        RAISE NOTICE 'PASS: no source_event_id duplicated';
     END;
 END;
 $test$;

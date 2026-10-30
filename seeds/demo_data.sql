@@ -32,30 +32,30 @@ VALUES
 -- The following inserts resolve machine/order IDs from business codes, so seed data
 -- does not depend on generated identity values.
 INSERT INTO machine_events (
-    machine_id, order_id, event_type, event_at, units_produced
+    machine_id, order_id, source_event_id, event_type, event_at, units_produced
 )
 -- Start assembly before its production increment.
-SELECT m.machine_id, o.order_id, 'MACHINE_STARTED',
+SELECT m.machine_id, o.order_id, 'DEMO-EVT-001', 'MACHINE_STARTED',
        TIMESTAMPTZ '2026-10-19 08:00:00+00', 0
 FROM machines AS m
 JOIN production_orders AS o ON o.machine_id = m.machine_id
 WHERE m.machine_code = 'M-001' AND o.order_code = 'PO-001';
 
 INSERT INTO machine_events (
-    machine_id, order_id, event_type, event_at, units_produced
+    machine_id, order_id, source_event_id, event_type, event_at, units_produced
 )
 -- Report 120 additional units for the assembly order.
-SELECT m.machine_id, o.order_id, 'PRODUCTION_REPORTED',
+SELECT m.machine_id, o.order_id, 'DEMO-EVT-002', 'PRODUCTION_REPORTED',
        TIMESTAMPTZ '2026-10-19 09:00:00+00', 120
 FROM machines AS m
 JOIN production_orders AS o ON o.machine_id = m.machine_id
 WHERE m.machine_code = 'M-001' AND o.order_code = 'PO-001';
 
 INSERT INTO machine_events (
-    machine_id, order_id, event_type, event_at, units_produced
+    machine_id, order_id, source_event_id, event_type, event_at, units_produced
 )
 -- Record a packaging fault; the schema does not yet enforce event sequence.
-SELECT m.machine_id, o.order_id, 'FAULT_DETECTED',
+SELECT m.machine_id, o.order_id, 'DEMO-EVT-003', 'FAULT_DETECTED',
        TIMESTAMPTZ '2026-10-19 10:00:00+00', 0
 FROM machines AS m
 JOIN production_orders AS o ON o.machine_id = m.machine_id
