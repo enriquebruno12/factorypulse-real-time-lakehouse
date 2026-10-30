@@ -62,6 +62,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'JSON file is missing field'):
                 read_events(path)
 
+    # Reject noninteger production counts.
     def test_invalid_units_produced(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -79,6 +80,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'has to have a int value'):
                 read_events(path)
 
+    # Required textual fields reject nonstring values.
     def test_invalid_values(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -96,6 +98,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'must be str type'):
                 read_events(path)
 
+    # Whitespace-only strings fail the nonblank check.
     def test_blank_values(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -113,6 +116,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'cannot be empty'):
                 read_events(path)
 
+    # A timestamp must be parseable as an ISO datetime.
     def test_invalid_event_at(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -130,6 +134,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'Invalid event_at, line 1'):
                 read_events(path)
 
+    # Parseable timestamps still require an explicit UTC offset.
     def test_missing_timezone(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -147,6 +152,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'must include timezone'):
                 read_events(path)
 
+    # The reader returns valid input without rewriting the timestamp.
     def test_valid_event_at(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'valid.jsonl'
@@ -168,6 +174,7 @@ class TestReadEvents(unittest.TestCase):
             self.assertEqual (len(events),1)
             self.assertEqual(events[0]['event_at'], timestamp)
 
+    # Only the event contract's four types are accepted.
     def test_invalid_event_type(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -185,6 +192,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'expected one of the following:.*line 1'):
                 read_events(path)
 
+    # Stop events carry exactly zero units, including rejecting negative values.
     def test_stop_event_rejects_negative_units(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'
@@ -202,6 +210,7 @@ class TestReadEvents(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'has to have 0 as units produced'):
                 read_events(path)
 
+    # Production reports must contribute a positive increment.
     def test_production_report_rejects_zero_units(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / 'invalid.jsonl'

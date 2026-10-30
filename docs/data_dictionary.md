@@ -1,10 +1,10 @@
 # FactoryPulse — Operational Data Dictionary
 
-**Status:** Proposed for review · **Version:** 0.1 · **Date:** 20 October 2026  
+**Status:** Current local implementation · **Version:** 0.2 · **Date:** 30 October 2026  
 **Scope:** Current PostgreSQL operational schema for a synthetic manufacturing scenario.  
 **SQL sources:** [machines](../sql/001_create_machines.sql), [production orders](../sql/002_create_production_orders.sql), [machine events](../sql/003_create_machine_events.sql), [production-report rule](../sql/004_enforce_production_report_payload.sql), and [order summary view](../sql/005_create_order_production_summary_view.sql).
 
-This dictionary separates rules already enforced by the SQL from business decisions proposed for the future simulator. It does not describe an actual factory.
+This dictionary describes the current SQL and distinguishes database guarantees from simulator and ingestion validation. It models a synthetic factory; cloud processing and several business decisions remain planned.
 
 ## machines
 
@@ -42,7 +42,8 @@ The pair (`machine_id`, `order_id`) is also unique (`uq_machine_order`). As `ord
 
 | Column | PostgreSQL type | Current SQL rule | Meaning |
 | --- | --- | --- | --- |
-| `event_id` | `integer` | Generated identity; primary key (`pk_events`). | Database row identifier, not a source event ID or deduplication key. |
+| `event_id` | `integer` | Generated identity; primary key (`pk_events`). | Database row identifier, distinct from the source deduplication key. |
+| `source_event_id` | `varchar(20)` | Required; globally unique (`uq_source_event_id`). | Stable producer ID across retries. The loader skips an insert when this ID already exists. |
 | `machine_id` | `integer` | Required; foreign key (`fk_machine`) to `machines.machine_id`. | Machine associated with the event. |
 | `order_id` | `integer` | Nullable for nonproduction events; required for production reports after 004. With `machine_id`, foreign key (`fk_machine_order`) to `production_orders(machine_id, order_id)` when supplied. | Related order if known; SQL permits NULL for starts, stops and faults; 004 requires an order for production reports. |
 | `event_type` | `varchar(20)` | Required; one of `MACHINE_STARTED`, `MACHINE_STOPPED`, `PRODUCTION_REPORTED`, `FAULT_DETECTED` (`ck_event`). | Kind of occurrence. |
@@ -54,13 +55,25 @@ The pair (`machine_id`, `order_id`) is also unique (`uq_machine_order`). As `ord
 
 - One machine can have many orders and events. Each order has exactly one machine.
 - An event has exactly one existing machine and may have one order. When `order_id` is supplied, the composite foreign key requires that order to belong to the event's machine. With `order_id = NULL`, only the machine relationship applies.
-- `timestamptz` represents an instant; PostgreSQL displays it in the session time zone. The original source offset is not retained in this schema. UTC is the proposed simulator convention.
+- `timestamptz` represents an instant; PostgreSQL displays it in the session time zone. The original source offset is not retained in this schema. The simulator emits UTC offsets (`+00:00`). The JSONL reader requires an explicit offset but accepts other offsets and preserves the input string until loading.
 
 ## Implemented derived total and remaining decisions
 
 - File 004 requires an order and a positive increment for `PRODUCTION_REPORTED`.
 - The [order summary view](../sql/005_create_order_production_summary_view.sql) is the source for produced totals: it sums accepted production increments and returns zero for orders without reports. The `production_orders` table has no separate produced-total column.
-- Still to implement: order status validation at report time; machine-state sequences; stable source event IDs, duplicate and late-event handling; and a policy for inactive machines.
+- Source IDs and duplicate skipping are implemented: the loader uses `ON CONFLICT (source_event_id) DO NOTHING` without modifying the existing row.
+- Machine-state sequences are validated by the single-machine simulator, not against historical database events during ingestion.
+- Still to implement: order status validation at report time; historical state validation; changed-payload conflict detection; late-event handling; and a policy for inactive machines.
 
 See the companion [event contract](event_contract.md) for detailed behavior and the distinction between implemented and planned rules.
 
+
+## JSONL-to-database mapping
+
+The [reader](../src/ingestion/read_events.py) requires all six JSONL keys: `source_event_id`, `machine_code`, `order_code`, `event_type`, `event_at` and `units_produced`. The first five must be nonblank strings; units must have Python type `int` (booleans are rejected). It checks supported event types, parseable timestamps with offsets and positive/zero unit rules.
+
+The [loader](../src/ingestion/db.py) resolves `machine_code` and `order_code` through a join of registered machines and their orders. The resulting `machine_id` and `order_id` are written with source ID, type, occurrence time and units. A missing pair raises an error; the transaction for that run is rolled back. Source ID uniqueness is global, so producers must coordinate IDs across all machines and sources. IDs from the fixed simulator repeat intentionally on replay.
+
+SQL allows an absent order for nonproduction events. The current JSONL application path is stricter: every event must have a nonblank order code and a registered matching pair. Text length and PostgreSQL integer range limits remain enforced by the database rather than fully prevalidated by the reader. SQL `NOT NULL` alone also does not reject blank source IDs; the reader supplies that check.
+
+The schema is applied manually from creation files during this development stage. Recreating only `machine_events` does not recreate dependent views: apply 003, then 004, then 005 after the appropriate disposable-database rebuild. See [TESTING.md](../TESTING.md), including the known view-fixture gap.

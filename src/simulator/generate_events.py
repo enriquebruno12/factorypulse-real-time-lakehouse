@@ -14,7 +14,7 @@ def validate_sequence(events):
         # Reject event types outside the contract before checking transitions.
         if event['event_type'] not in ('MACHINE_STARTED','PRODUCTION_REPORTED','MACHINE_STOPPED','FAULT_DETECTED'):
             raise ValueError(f"{event['event_type']} invalid, expected MACHINE_STARTED, PRODUCTION_REPORTED, MACHINE_STOPPED OR FAULT_DETECTED . Event number {event_number}")
-        
+
         # Production reports are valid only while the machine is running.
         if current_state != 'RUNNING' and event['event_type'] == 'PRODUCTION_REPORTED':
             raise ValueError(f'machine is not running. Event number {event_number}')
@@ -84,7 +84,7 @@ def main():
         event_result['source_event_id'] = f'EVT-{n+1:03d}'
         event_result['event_at'] = (horario + timedelta(minutes=event_result.pop('offset_minutes'))).isoformat()
         print(json.dumps(event_result))
-    
+
 
 if __name__ == '__main__':
     main()

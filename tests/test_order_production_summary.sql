@@ -1,6 +1,8 @@
 -- Run after 001-005 in a disposable database. Expected result:
 -- V9001 = 35 units (25 + 10); V9002 = 0 units (no production events).
 -- This is a visual result check; the query does not raise on wrong totals.
+-- Known setup gap: these event inserts still omit the required source_event_id.
+-- Update those fixtures before running this check against the current schema.
 BEGIN;
 
 -- Arrange one machine and two orders: one producing, one with no events.

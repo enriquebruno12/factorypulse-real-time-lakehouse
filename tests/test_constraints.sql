@@ -37,7 +37,7 @@ BEGIN
 
     -- Positive control: valid machine/order pair and positive production increment.
     INSERT INTO machine_events (
-    machine_id, order_id, source_event_id, event_type, event_at, units_produced
+        machine_id, order_id, source_event_id, event_type, event_at, units_produced
     )
     VALUES (
         machine_a, order_a, 'DEMO-EVT-010', 'PRODUCTION_REPORTED',
@@ -209,7 +209,7 @@ BEGIN
         END IF;
         RAISE NOTICE 'PASS: negative production increment rejected';
     END;
-    	
+
     -- Test 10 / ck_units: a production report must identify its order (004).
     BEGIN
         INSERT INTO machine_events (
@@ -227,7 +227,7 @@ BEGIN
         END IF;
         RAISE NOTICE 'PASS: event with no order rejected';
     END;
-    
+
     -- Test 11 / ck_units: a production report must contain at least one unit (004).
     BEGIN
         INSERT INTO machine_events (
@@ -245,7 +245,8 @@ BEGIN
         END IF;
         RAISE NOTICE 'PASS: production reported with no units produced rejected';
     END;
-    
+
+    -- Test 12 / uq_source_event_id: replay the positive control's source ID.
     BEGIN
         INSERT INTO machine_events (
             machine_id, order_id, source_event_id, event_type, event_at, units_produced
@@ -267,4 +268,3 @@ $test$;
 
 -- Remove all setup rows, including the successful inserts.
 ROLLBACK;
-

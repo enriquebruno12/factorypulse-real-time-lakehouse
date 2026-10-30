@@ -5,13 +5,14 @@ create table if not exists machine_events (
     machine_id integer not null,
     -- Optional for start, stop and fault events; 004 requires it for production reports.
     order_id integer,
+    -- Stable producer ID: globally unique across all machines and source files.
     source_event_id varchar(20) not null,
     event_type varchar(20) not null,
     -- Store the occurrence time separately from the row creation time.
     event_at timestamptz not null,
     units_produced integer not null default 0,
     created_at timestamptz not null default current_timestamp,
-    
+
     constraint pk_events primary key (event_id),
     -- Every event must reference a registered machine.
     constraint fk_machine foreign key (machine_id)
@@ -19,12 +20,13 @@ create table if not exists machine_events (
     -- If an order is supplied, it must belong to this same machine.
     constraint fk_machine_order foreign key (machine_id,order_id)
         references production_orders (machine_id,order_id),
+    -- The ingestion INSERT uses this key to skip replays with ON CONFLICT.
     constraint uq_source_event_id unique (source_event_id),
     -- Reject event types outside the supported four.
     constraint ck_event check (event_type in ('MACHINE_STARTED','MACHINE_STOPPED','PRODUCTION_REPORTED','FAULT_DETECTED')),
     -- Starts, stops and faults carry zero units; 004 tightens production reports.
     constraint ck_units check (
-        (event_type = 'PRODUCTION_REPORTED' and units_produced >= 0) 
+        (event_type = 'PRODUCTION_REPORTED' and units_produced >= 0)
         or
         (event_type <> 'PRODUCTION_REPORTED' and units_produced = 0)
     )

@@ -12,10 +12,10 @@ create table if not exists production_orders(
     planned_start_at timestamptz not null,
     planned_end_at timestamptz not null,
     created_at timestamptz not null default current_timestamp,
-    
+
     constraint pk_orders primary key (order_id),
     -- Do not assign an order to a machine that does not exist.
-    constraint fk_machines foreign key (machine_id) 
+    constraint fk_machines foreign key (machine_id)
         references machines(machine_id),
     -- A production plan must target at least one unit.
     constraint ck_planned_quantity check (planned_quantity > 0),
@@ -26,5 +26,5 @@ create table if not exists production_orders(
     -- This pair is referenced by the composite foreign key in machine_events.
     -- order_id is already unique; this does not add another business key.
     constraint uq_machine_order unique (machine_id,order_id)
-    
+
 );
