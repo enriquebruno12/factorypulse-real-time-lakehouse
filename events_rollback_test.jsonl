@@ -1,0 +1,2 @@
+﻿{"machine_code": "M-001", "event_type": "MACHINE_STARTED", "units_produced": 0, "order_code": "PO-001", "source_event_id": "EVT-050", "event_at": "2026-10-21T08:00:00+00:00"}
+{"machine_code": "M-001", "event_type": "PRODUCTION_REPORTED", "units_produced": 25, "order_code": "PO-123", "source_event_id": "EVT-051", "event_at": "2026-10-21T08:30:00+00:00"}

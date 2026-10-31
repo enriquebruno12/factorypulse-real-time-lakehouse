@@ -1,5 +1,6 @@
 import os
 import psycopg
+import argparse
 from dotenv import load_dotenv
 from read_events import read_events
 
@@ -49,6 +50,19 @@ def insert_event(connection, event, machine_id, order_id):
     return result
 
 def main():
+
+    parser = argparse.ArgumentParser(
+        description='Load machine events from JSON file into PostgreSQL'
+    )
+
+    parser.add_argument(
+        '--input',
+        default='events.jsonl',
+        help='Path to the JSONL file to load'
+    )
+
+    args = parser.parse_args()
+
     # Load local connection settings without storing credentials in source code.
     load_dotenv()
 
@@ -63,7 +77,7 @@ def main():
     ) as connection:
 
         # Read and validate the complete file before the first database lookup.
-        events = read_events('./events.jsonl')
+        events = read_events(args.input)
         skipped = 0
         inserted = 0
 
