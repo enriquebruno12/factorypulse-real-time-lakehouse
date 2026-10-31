@@ -140,31 +140,42 @@ PostgreSQL enforces the row-level constraints above. The Python simulator valida
 
 ## Run the current stage locally
 
-**Prerequisites:** Docker with Compose support, Git, Python 3.12+ for the current source syntax, and an optional PostgreSQL client such as DBeaver. Python dependencies are installed manually below; a dependency lockfile has not yet been added.
+**Prerequisites:** Docker with Compose support, Git, Python 3.12+ for the current source syntax, and an optional PostgreSQL client such as DBeaver. Run the following commands from the repository root.
 
 1. Clone this repository and enter its directory.
-2. Create a local `.env` file:
+2. Create and activate a virtual environment. On Windows PowerShell:
 
-   ```dotenv
-   POSTGRES_USER=factorypulse
-   POSTGRES_PASSWORD=choose-a-strong-local-password
-   POSTGRES_DB=factorypulse
-
-   PGHOST=127.0.0.1
-   PGPORT=5433
-   PGDATABASE=factorypulse
-   PGUSER=factorypulse
-   PGPASSWORD=choose-a-strong-local-password
+   ```powershell
+   python -m venv .venv
+   .\.venv\Scripts\Activate.ps1
    ```
 
-3. Start the service and inspect its health:
+   On Bash, activate it with `source .venv/bin/activate`.
+
+3. Install the runtime dependencies using the versions recorded in [requirements.txt](requirements.txt):
+
+   ```powershell
+   python -m pip install -r requirements.txt
+   ```
+
+   This installs Psycopg with its binary implementation and python-dotenv. The file pins the direct dependencies; it is not a complete lockfile for transitive dependencies.
+
+4. For initial setup, copy [.env.example](.env.example) to a local `.env` file. On PowerShell:
+
+   ```powershell
+   Copy-Item .env.example .env
+   ```
+
+   Edit `.env` before starting PostgreSQL. Replace `change_me` with your local password and adjust the connection settings as needed. Keep `POSTGRES_USER` / `PGUSER`, `POSTGRES_PASSWORD` / `PGPASSWORD` and `POSTGRES_DB` / `PGDATABASE` consistent. If you already have a configured `.env`, keep it and compare its variable names with the example instead of overwriting it.
+
+5. Start the service and inspect its health:
 
    ```bash
    docker compose up -d
    docker compose ps
    ```
 
-4. Open `psql`:
+6. Open `psql` (adjust the username and database if you changed the example values):
 
    ```bash
    docker compose exec postgres psql -U factorypulse -d factorypulse
@@ -176,13 +187,7 @@ PostgreSQL is bound to `127.0.0.1:5433` on the host and uses a Docker named volu
 
 ### Run the local event example
 
-From the repository root, create a virtual environment and install the two runtime dependencies. On Windows, activate it with `.venv\Scripts\Activate.ps1`; on Bash, use `source .venv/bin/activate`.
-
-```bash
-python -m venv .venv
-# Activate the environment using the command for your shell, then:
-python -m pip install "psycopg[binary]" python-dotenv
-```
+With the virtual environment activated and dependencies installed as described above, run the following commands from the repository root.
 
 Generate the deterministic JSONL sample, inspect it with the reader and run the Python tests:
 
@@ -201,7 +206,7 @@ python src/ingestion/db.py
 python src/ingestion/db.py
 ```
 
-The first load of the seven new simulator IDs reports `7 lines inserted, 0 lines skipped`. A replay reports `0 lines inserted, 7 lines skipped`. The loader prints these counters after the transaction commits. A missing machine/order pair or another unhandled error rolls back that run's database changes. The script currently uses `events.jsonl` as a fixed input path.
+The first load of the seven new simulator IDs reports `7 lines inserted, 0 lines skipped`. A replay reports `0 lines inserted, 7 lines skipped`. The loader prints these counters after the transaction commits. A missing machine/order pair or another unhandled error rolls back that run's database changes. The default input is `events.jsonl`. To select another JSONL file without editing the source, use `python src/ingestion/db.py --input path/to/events.jsonl`. Run `python src/ingestion/db.py --help` to see the available option.
 
 **Verification boundary:** these replay counters were observed locally; the next manual check is to query stored simulator events and confirm **7 rows / 35 units**. If the demo seed's 120-unit report is present, the order view includes it as well: expect **155 units** for `PO-001` after one simulator load, rather than 35. See [TESTING.md](TESTING.md) for separate Python and SQL checks and the known view-fixture gap.
 
@@ -256,11 +261,13 @@ The deliverable for each phase is runnable code, a reproducible setup and eviden
 
 ```text
 .
+├── .env.example
 ├── .gitignore
 ├── README.md
 ├── TESTING.md
 ├── compose.yaml
 ├── events.jsonl
+├── requirements.txt
 ├── docs/
 │   ├── data_dictionary.md
 │   └── event_contract.md
