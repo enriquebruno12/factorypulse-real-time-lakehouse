@@ -80,7 +80,8 @@ def main():
         port=os.environ['PGPORT'],
         dbname=os.environ['PGDATABASE'],
         user=os.environ['PGUSER'],
-        password=os.environ['PGPASSWORD']
+        password=os.environ['PGPASSWORD'],
+        connect_timeout=10
     ) as connection:
 
         # Read and validate the complete file before the first database lookup.
