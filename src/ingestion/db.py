@@ -1,8 +1,11 @@
 import os
 import psycopg
 import argparse
+import logging
 from dotenv import load_dotenv
 from read_events import read_events
+
+logger = logging.getLogger(__name__)
 
 # Resolve source business codes to the internal IDs of a matching machine/order pair.
 def get_machine_order_ids(connection, machine_code, order_code):
@@ -51,6 +54,8 @@ def insert_event(connection, event, machine_id, order_id):
 
 def main():
 
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(name)s | %(message)s')
+
     parser = argparse.ArgumentParser(
         description='Load machine events from JSON file into PostgreSQL'
     )
@@ -62,6 +67,8 @@ def main():
     )
 
     args = parser.parse_args()
+
+    logger.info('Loading events from %s',args.input)
 
     # Load local connection settings without storing credentials in source code.
     load_dotenv()
@@ -98,7 +105,12 @@ def main():
                 inserted+=1
 
     # Report success only after the connection context has committed.
-    print(f'{inserted} lines inserted, {skipped} lines skipped')
+    logger.info(f'{inserted} lines inserted, {skipped} lines skipped')
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        logger.exception('Event ingestion failed')
+        raise
+
