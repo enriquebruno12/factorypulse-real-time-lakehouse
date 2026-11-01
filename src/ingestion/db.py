@@ -2,6 +2,7 @@ import os
 import psycopg
 import argparse
 import logging
+import time
 from dotenv import load_dotenv
 from read_events import read_events
 
@@ -68,6 +69,8 @@ def main():
 
     args = parser.parse_args()
 
+    start_time = time.perf_counter()
+
     logger.info('Loading events from %s',args.input)
 
     # Load local connection settings without storing credentials in source code.
@@ -105,8 +108,11 @@ def main():
             else:
                 inserted+=1
 
+    elapsed_time = time.perf_counter() - start_time
+
+
     # Report success only after the connection context has committed.
-    logger.info(f'{inserted} lines inserted, {skipped} lines skipped')
+    logger.info(f'{inserted} lines inserted, {skipped} lines skipped, completed in {elapsed_time:.2f}s')
 
 if __name__ == '__main__':
     try:
