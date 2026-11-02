@@ -76,6 +76,18 @@ def main():
     # Load local connection settings without storing credentials in source code.
     load_dotenv()
 
+    envs = [
+        'PGHOST',
+        'PGPORT',
+        'PGDATABASE',
+        'PGUSER',
+        'PGPASSWORD'
+    ]
+
+    for env in envs:
+        if not os.getenv(env):
+            raise ValueError(f'{env} value is missing')
+
     # All lookups and inserts share one transaction. Normal exit commits;
     # an exception leaving this block rolls back and closes the connection.
     with psycopg.connect(
