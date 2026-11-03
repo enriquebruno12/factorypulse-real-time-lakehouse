@@ -2,6 +2,7 @@ import os
 import psycopg
 import json
 import argparse
+import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
