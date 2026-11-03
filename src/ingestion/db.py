@@ -4,7 +4,7 @@ import argparse
 import logging
 import time
 from dotenv import load_dotenv
-from read_events import read_events
+from src.ingestion.read_events import read_events
 
 logger = logging.getLogger(__name__)
 
