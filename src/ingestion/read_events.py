@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 
+
 # Read newline-delimited JSON and report input errors with their source line.
 def read_events(file_path):
     path = Path(file_path)
@@ -18,8 +19,9 @@ def read_events(file_path):
 
     event_types_allowed = ['MACHINE_STARTED', 'PRODUCTION_REPORTED', 'FAULT_DETECTED', 'MACHINE_STOPPED']
 
-    with path.open('r',encoding='utf-8-sig') as file:
-        for line_number, line in enumerate(file,start=1):
+    # utf-8-sig also accepts a UTF-8 BOM produced by some shell redirects.
+    with path.open('r', encoding='utf-8-sig') as file:
+        for line_number, line in enumerate(file, start=1):
             # Parse one JSON document per line while preserving its line number.
             try:
                 event = json.loads(line)
@@ -28,7 +30,7 @@ def read_events(file_path):
                     f'Invalid JSON within file {path}, line {line_number}'
                 ) from error
             # A valid JSON scalar or array is not an event record.
-            if not isinstance(event,dict):
+            if not isinstance(event, dict):
                 raise ValueError(f'JSON event in file {path}, line {line_number} must be a Dict type')
 
             # Reject incomplete records before handing them to later stages.
@@ -54,7 +56,7 @@ def read_events(file_path):
                     try:
                         parsed_date = datetime.fromisoformat(value)
                     except ValueError as error:
-                        raise ValueError (f'Invalid {field}, line {line_number}: {value}') from error
+                        raise ValueError(f'Invalid {field}, line {line_number}: {value}') from error
 
                     # Explicit offsets disambiguate the occurrence instant.
                     if parsed_date.tzinfo is None:
@@ -67,14 +69,16 @@ def read_events(file_path):
                                          f'[MACHINE_STARTED, PRODUCTION_REPORTED, FAULT_DETECTED, MACHINE_STOPPED], line {line_number}')
 
             # Check relationships between fields after every type has been validated.
-            if event['event_type'] == 'PRODUCTION_REPORTED' and event['units_produced'] <=0:
+            if event['event_type'] == 'PRODUCTION_REPORTED' and event['units_produced'] <= 0:
                 raise ValueError(f'{field} must have units produced greater than 0, line number {line_number}')
-            elif event['event_type'] in ['MACHINE_STARTED', 'FAULT_DETECTED','MACHINE_STOPPED'] and event['units_produced'] != 0:
+            elif event['event_type'] in ['MACHINE_STARTED', 'FAULT_DETECTED', 'MACHINE_STOPPED'] and event['units_produced'] != 0:
                 raise ValueError(f'{event['event_type']} has to have 0 as units produced , line number {line_number}')
 
+            # Keep the original payload; this reader does not resolve database IDs.
             events.append(event)
 
     return events
+
 
 # Direct execution shows a quick read check; imports expose read_events only.
 def main():

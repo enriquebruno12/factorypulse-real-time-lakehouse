@@ -1,3 +1,4 @@
+-- Apply schema files in numerical order; this file creates master data structure only.
 -- 001: Register machines before creating orders or events.
 -- machine_id is an internal key; machine_code is the unique business-facing code.
 create table if not exists machines (

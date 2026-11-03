@@ -4,6 +4,7 @@
 -- The inner BEGIN/EXCEPTION blocks isolate expected failures so later cases run.
 -- The transaction is rolled back, so this file leaves no test rows behind.
 
+-- A failed INSERT must reach its expected handler; unexpected errors escape the DO block.
 BEGIN;
 
 -- Dollar quoting delimits this PL/pgSQL test block; it is not a transaction.
@@ -51,6 +52,7 @@ BEGIN
         VALUES ('TEST-M-1', 'Duplicate code');
         RAISE EXCEPTION 'FAIL: duplicate machine code was accepted';
     EXCEPTION WHEN unique_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'uq_machine_code' THEN
             RAISE EXCEPTION 'FAIL: expected uq_machine_code, got %', actual_constraint;
@@ -71,6 +73,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: zero planned quantity was accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_planned_quantity' THEN
             RAISE EXCEPTION 'FAIL: expected ck_planned_quantity, got %', actual_constraint;
@@ -91,6 +94,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: invalid order schedule was accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_planned_end_at' THEN
             RAISE EXCEPTION 'FAIL: expected ck_planned_end_at, got %', actual_constraint;
@@ -111,6 +115,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: invalid order status was accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_status' THEN
             RAISE EXCEPTION 'FAIL: expected ck_status, got %', actual_constraint;
@@ -131,6 +136,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: missing machine was accepted';
     EXCEPTION WHEN foreign_key_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'fk_machines' THEN
             RAISE EXCEPTION 'FAIL: expected fk_machines, got %', actual_constraint;
@@ -149,6 +155,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: event with another machine''s order was accepted';
     EXCEPTION WHEN foreign_key_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'fk_machine_order' THEN
             RAISE EXCEPTION 'FAIL: expected fk_machine_order, got %', actual_constraint;
@@ -167,6 +174,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: unknown event type was accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_event' THEN
             RAISE EXCEPTION 'FAIL: expected ck_event, got %', actual_constraint;
@@ -185,6 +193,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: stop event with units was accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_units' THEN
             RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
@@ -203,6 +212,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: negative production increment was accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_units' THEN
             RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
@@ -221,6 +231,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: event with no order accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_units' THEN
             RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
@@ -239,6 +250,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: production reported with no units produced accepted';
     EXCEPTION WHEN check_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'ck_units' THEN
             RAISE EXCEPTION 'FAIL: expected ck_units, got %', actual_constraint;
@@ -257,6 +269,7 @@ BEGIN
         );
         RAISE EXCEPTION 'FAIL: duplicate source_event_id accepted';
     EXCEPTION WHEN unique_violation THEN
+        -- Read the failed constraint name from PostgreSQL's active exception diagnostics.
         GET STACKED DIAGNOSTICS actual_constraint = CONSTRAINT_NAME;
         IF actual_constraint IS DISTINCT FROM 'uq_source_event_id' THEN
             RAISE EXCEPTION 'FAIL: expected uq_source_event_id, got %', actual_constraint;

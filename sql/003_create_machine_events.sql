@@ -21,6 +21,7 @@ create table if not exists machine_events (
     constraint fk_machine_order foreign key (machine_id,order_id)
         references production_orders (machine_id,order_id),
     -- The ingestion INSERT uses this key to skip replays with ON CONFLICT.
+    -- Enforce producer identity globally, independently of the generated event_id.
     constraint uq_source_event_id unique (source_event_id),
     -- Reject event types outside the supported four.
     constraint ck_event check (event_type in ('MACHINE_STARTED','MACHINE_STOPPED','PRODUCTION_REPORTED','FAULT_DETECTED')),

@@ -1,6 +1,7 @@
 -- 002: Create production orders after machines.
 -- Every order belongs to one machine and has a positive target and valid schedule.
 -- Production totals are derived from machine_events by the view in 005.
+-- CREATE IF NOT EXISTS does not modify a table that was already created.
 create table if not exists production_orders(
     order_id integer generated always as identity,
     order_code varchar(6) not null unique,

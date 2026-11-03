@@ -4,6 +4,8 @@ from tempfile import TemporaryDirectory
 
 from src.ingestion.read_events import read_events
 
+
+# TemporaryDirectory removes each fixture after its test, including on failure.
 # Exercise malformed input without keeping fixture files in the repository.
 class TestReadEvents(unittest.TestCase):
 
@@ -23,7 +25,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'line 2'):
+            with self.assertRaisesRegex(ValueError, 'line 2'):
                 read_events(path)
 
     # JSON scalars are valid JSON but are not event objects.
@@ -42,7 +44,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'line 2 must be a Dict type'):
+            with self.assertRaisesRegex(ValueError, 'line 2 must be a Dict type'):
                 read_events(path)
 
     # Event objects must include every required payload field.
@@ -59,7 +61,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'JSON file is missing field'):
+            with self.assertRaisesRegex(ValueError, 'JSON file is missing field'):
                 read_events(path)
 
     # Reject noninteger production counts.
@@ -77,7 +79,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'has to have a int value'):
+            with self.assertRaisesRegex(ValueError, 'has to have a int value'):
                 read_events(path)
 
     # Required textual fields reject nonstring values.
@@ -95,7 +97,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'must be str type'):
+            with self.assertRaisesRegex(ValueError, 'must be str type'):
                 read_events(path)
 
     # Whitespace-only strings fail the nonblank check.
@@ -113,7 +115,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'cannot be empty'):
+            with self.assertRaisesRegex(ValueError, 'cannot be empty'):
                 read_events(path)
 
     # A timestamp must be parseable as an ISO datetime.
@@ -131,7 +133,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'Invalid event_at, line 1'):
+            with self.assertRaisesRegex(ValueError, 'Invalid event_at, line 1'):
                 read_events(path)
 
     # Parseable timestamps still require an explicit UTC offset.
@@ -149,7 +151,7 @@ class TestReadEvents(unittest.TestCase):
                 encoding='utf-8'
             )
 
-            with self.assertRaisesRegex(ValueError,'must include timezone'):
+            with self.assertRaisesRegex(ValueError, 'must include timezone'):
                 read_events(path)
 
     # The reader returns valid input without rewriting the timestamp.
@@ -171,7 +173,7 @@ class TestReadEvents(unittest.TestCase):
 
             events = read_events(path)
 
-            self.assertEqual (len(events),1)
+            self.assertEqual(len(events), 1)
             self.assertEqual(events[0]['event_at'], timestamp)
 
     # Only the event contract's four types are accepted.

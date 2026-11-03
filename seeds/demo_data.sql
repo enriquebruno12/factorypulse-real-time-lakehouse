@@ -1,5 +1,6 @@
 -- Optional demo data. Run once against a fresh, disposable FactoryPulse database.
 -- Never run this file as part of schema setup or against a production database.
+-- Seed IDs use DEMO-EVT-* so they do not overlap the simulator's EVT-* IDs.
 BEGIN;
 
 -- Two registered machines for the example factory.

@@ -1,6 +1,6 @@
 # FactoryPulse — Operational Data Dictionary
 
-**Status:** Current local implementation · **Version:** 0.2 · **Date:** 30 October 2026  
+**Status:** Current local implementation · **Version:** 0.3 · **Date:** 3 November 2026  
 **Scope:** Current PostgreSQL operational schema for a synthetic manufacturing scenario.  
 **SQL sources:** [machines](../sql/001_create_machines.sql), [production orders](../sql/002_create_production_orders.sql), [machine events](../sql/003_create_machine_events.sql), [production-report rule](../sql/004_enforce_production_report_payload.sql), and [order summary view](../sql/005_create_order_production_summary_view.sql).
 
@@ -67,7 +67,6 @@ The pair (`machine_id`, `order_id`) is also unique (`uq_machine_order`). As `ord
 
 See the companion [event contract](event_contract.md) for detailed behavior and the distinction between implemented and planned rules.
 
-
 ## JSONL-to-database mapping
 
 The [reader](../src/ingestion/read_events.py) requires all six JSONL keys: `source_event_id`, `machine_code`, `order_code`, `event_type`, `event_at` and `units_produced`. The first five must be nonblank strings; units must have Python type `int` (booleans are rejected). It checks supported event types, parseable timestamps with offsets and positive/zero unit rules.
@@ -76,4 +75,13 @@ The [loader](../src/ingestion/db.py) resolves `machine_code` and `order_code` th
 
 SQL allows an absent order for nonproduction events. The current JSONL application path is stricter: every event must have a nonblank order code and a registered matching pair. Text length and PostgreSQL integer range limits remain enforced by the database rather than fully prevalidated by the reader. SQL `NOT NULL` alone also does not reject blank source IDs; the reader supplies that check.
 
-The schema is applied manually from creation files during this development stage. Recreating only `machine_events` does not recreate dependent views: apply 003, then 004, then 005 after the appropriate disposable-database rebuild. See [TESTING.md](../TESTING.md), including the known view-fixture gap.
+The schema is applied manually from creation files during this development stage. Recreating only `machine_events` does not recreate dependent views: apply 003, then 004, then 005 after the appropriate disposable-database rebuild. The view-check fixtures include distinct source IDs. See [TESTING.md](../TESTING.md) for manual and automated verification boundaries.
+
+
+## Local loader execution
+
+Run `python -m src.ingestion.db --input events.jsonl` from the repository root with the virtual environment active. `--input` is optional and defaults to `events.jsonl`; an alternate path selects a different file, not a different schema. Runtime dependencies are pinned in [requirements.txt](../requirements.txt), and [.env.example](../.env.example) documents local settings.
+
+The loader validates the presence of nonempty `PG*` connection settings and uses a 10-second connection timeout. These are execution safeguards, not additional database constraints. `ingest_events(connection, events)` receives a caller-owned connection and returns `(inserted, skipped)` without committing independently. `main()` controls the transaction and logs successful counts and elapsed time after commit and connection close. Failures are logged with a traceback and re-raised to preserve a nonzero process exit status.
+
+Manual replay verification confirmed 7 simulator events and 35 units after reprocessing. Manual rollback and failure/recovery checks were exercised locally; automated database integration tests remain planned. None of these execution changes alter table grain, column definitions or the source-ID conflict policy.

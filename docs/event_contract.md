@@ -1,6 +1,6 @@
 # FactoryPulse — Machine Event Contract
 
-**Status:** Current local contract with open decisions · **Version:** 0.2 · **Date:** 30 October 2026  
+**Status:** Current local contract with open decisions · **Version:** 0.3 · **Date:** 3 November 2026  
 **Scope:** Synthetic machine events generated, read and loaded locally into PostgreSQL. **SQL sources:** [machine events](../sql/003_create_machine_events.sql), [production-report rule](../sql/004_enforce_production_report_payload.sql), and [order summary view](../sql/005_create_order_production_summary_view.sql). See the [companion data dictionary](data_dictionary.md) for every column.
 
 This contract distinguishes SQL guarantees, simulator validation and JSONL ingestion behavior. The local pipeline is implemented for a fixed synthetic scenario; future operational policies would require agreement with manufacturing and analytics stakeholders.
@@ -71,7 +71,6 @@ The [summary view](../sql/005_create_order_production_summary_view.sql) would sh
 4. Implemented: `source_event_id` is globally unique and stable across retries. Replays are ignored; changed-payload reuse remains an open policy.
 5. Still to decide: late-arrival windows, quarantine rules, multi-source ID generation and historical state validation.
 
-
 ## Incoming JSONL envelope
 
 The current reader requires the following six keys on every input record. Extra keys are not currently rejected.
@@ -102,6 +101,15 @@ The committed [sample](../events.jsonl) contains seven events on 21 October 2026
 
 ## Ingestion transaction and duplicate policy
 
-The [loader](../src/ingestion/db.py) reads the fixed local file, resolves IDs and inserts all accepted records through one PostgreSQL connection. A normal context exit commits the transaction; an exception escaping that context rolls back the run. The final inserted/skipped counters are printed after successful exit.
+The [loader](../src/ingestion/db.py) reads the JSONL file selected by `--input` (default `events.jsonl`), resolves IDs and inserts all accepted records through one PostgreSQL connection. A normal context exit commits the transaction; an exception escaping that context rolls back the run. The final inserted/skipped counters and elapsed seconds are logged after commit and connection close.
 
-A new source ID produces a new row and returns `event_id`. An existing ID produces no returned row and is counted as skipped. The existing payload is retained without comparison, so this is replay protection rather than detection of conflicting content. Other constraint violations still fail the run. The local demonstration produced 7 inserted / 0 skipped and then 0 inserted / 7 skipped. An independent persisted count/total check and automated database integration tests remain pending. See [TESTING.md](../TESTING.md).
+A new source ID produces a new row and returns `event_id`. An existing ID produces no returned row and is counted as skipped. The existing payload is retained without comparison, so this is replay protection rather than detection of conflicting content. Other constraint violations still fail the run. The local demonstration produced 7 inserted / 0 skipped and then 0 inserted / 7 skipped. A manual persisted check confirmed 7 simulator rows and 35 units after replay; rollback was also exercised manually. Automated database integration tests remain planned. See [TESTING.md](../TESTING.md).
+
+
+## Execution and failure reporting
+
+Run `python -m src.ingestion.db` from the repository root with the virtual environment active; `--help` describes the optional input path. `main()` configures the CLI, environment and logs; `ingest_events(connection, events)` processes validated records using the same caller-owned transaction and returns `(inserted, skipped)`.
+
+Missing or empty `PG*` settings fail before the connection attempt. Connection establishment uses a 10-second timeout; it does not limit query duration. Console logs identify the input file and report successful counts and elapsed seconds after commit. Unhandled errors are logged with a traceback and re-raised, producing a nonzero process exit status; failed runs do not emit a success summary. Local timestamps and elapsed seconds are operational diagnostics, distinct from the payload's `event_at` and the row's `created_at`.
+
+These changes do not add historical-state validation, quarantine, automatic retries or changed-payload detection. See [TESTING.md](../TESTING.md) for the manual failure and recovery procedures and the remaining automated-test scope.

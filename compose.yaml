@@ -4,6 +4,7 @@ services:
     container_name: factorypulse-postgres
     restart: unless-stopped
 
+    # Compose reads these values from the local, ignored .env file.
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -17,6 +18,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+    # $$ defers variable expansion to the container rather than Compose.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s

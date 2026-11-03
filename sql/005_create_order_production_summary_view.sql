@@ -5,7 +5,8 @@ create view vw_order_production_summary as
 -- Group by the order key so each order appears once.
 select o.order_id, o.order_code, o.machine_id, o.planned_quantity, coalesce(sum(e.units_produced),0) as total_units_produced
 from production_orders o
--- Keep orders with no matching production report.
+-- Keep orders with no events. All event types join; ck_units makes nonproduction units zero.
+-- With the current constraints, summing all joined events sums production increments.
 left join machine_events e
     on o.order_id = e.order_id
 group by o.order_id;

@@ -17,7 +17,7 @@
 
 FactoryPulse models a realistic manufacturing data flow: operational records are generated, validated, ingested, transformed and ultimately made available for reporting. The project is being developed in stages so that each new tool has a clear role and a working result.
 
-> **Where the project stands:** PostgreSQL 17 runs locally with Docker Compose. Five numbered SQL files define the operational tables, production-report constraint and order summary view. A deterministic Python simulator emits seven machine events as JSON Lines. The reader validates required fields, types, nonblank strings, explicit timestamp offsets, allowed event types and production units. The Psycopg loader resolves business codes to machine/order IDs and inserts events in one transaction, skipping existing source IDs. A local replay was demonstrated with **7 inserted / 0 skipped**, followed by **0 inserted / 7 skipped**. Sixteen Python unit tests cover selected simulator and reader rules. SQL constraint checks and a manual view check are also present; the view check's fixtures still need source IDs. Azure services, lakehouse processing, orchestration and dashboards remain planned.
+> **Where the project stands:** PostgreSQL 17 runs locally with Docker Compose. Five numbered SQL files define the operational tables, production-report constraint and order summary view. A deterministic Python simulator emits seven machine events as JSON Lines. The reader validates required fields, types, nonblank strings, explicit timestamp offsets, allowed event types and production units. The Psycopg loader resolves business codes to machine/order IDs and inserts events in one transaction, skipping existing source IDs. A local replay was demonstrated with **7 inserted / 0 skipped**, followed by **0 inserted / 7 skipped**. Sixteen Python unit tests cover selected simulator and reader rules. SQL constraint checks and a manual view check include source IDs. Manual replay and rollback checks have been completed locally. The loader now provides a configurable input path, structured console logs, execution duration, required-environment validation and a connection timeout. Azure services, lakehouse processing, orchestration and dashboards remain planned.
 
 ## Why this project exists
 
@@ -44,6 +44,7 @@ This is a **synthetic-data portfolio project**, not a production factory system.
 | Event simulation | **Implemented, fixed scenario** | [Python simulator](src/simulator/generate_events.py) validates state transitions, event order and unit increments, then emits [seven sample events](events.jsonl) |
 | Local JSONL reading | **Implemented** | [Reader](src/ingestion/read_events.py) validates record shape, required fields, types, timestamp offsets, event types and unit rules |
 | PostgreSQL event ingestion | **Implemented locally** | [Loader](src/ingestion/db.py) resolves matching machine/order IDs, uses parameterized SQL, commits the file as one transaction and skips duplicate `source_event_id` values |
+| Ingestion CLI and diagnostics | **Implemented locally** | Module execution, `--input`, required `PG*` validation, a 10-second connection timeout, timestamped logs, elapsed time and nonzero failure exit status |
 | Python unit tests | **Implemented** | [Simulator tests](tests/test_generate_events.py) and [reader tests](tests/test_read_events.py); sixteen cases cover the current examples |
 | Batch and streaming ingestion | Planned | Azure Data Factory and Azure Event Hubs pipelines |
 | Lakehouse transformations | Planned | ADLS Gen2, Databricks/PySpark, Delta Lake and Bronze/Silver/Gold datasets |
@@ -51,7 +52,7 @@ This is a **synthetic-data portfolio project**, not a production factory system.
 | Snowflake analytical serving | Planned, after core lakehouse | Load curated datasets, build SQL/dbt marts and compare analytical delivery paths |
 | Infrastructure and delivery | Planned | Terraform, GitHub Actions, monitoring and deployment documentation |
 
-**Current focus:** verify persisted event totals and strengthen the local ingestion checks before cloud integration. A checked item below means a file or demonstrated capability exists; planned tools explain direction, not completed experience.
+**Current focus:** consolidate the local ingestion pipeline and its documentation before cloud integration. Automated database integration tests remain a future task. A checked item below means a file or demonstrated capability exists; planned tools explain direction, not completed experience.
 
 ## Architecture
 
@@ -92,6 +93,7 @@ flowchart LR
 | Psycopg 3 | Parameterized PostgreSQL queries and connection/transaction management | **In use** |
 | python-dotenv | Load local connection settings from `.env` | **In use** |
 | JSON Lines | Local sample event exchange format | **In use** |
+| `argparse`, `logging`, `time` | Configurable CLI input, run diagnostics and elapsed-time measurement | **In use** |
 | `unittest` | Checks for simulator rules and malformed JSONL records | **In use** |
 | SQL constraint checks | Validate database rules in a rollback-only test transaction | **Implemented and run locally** |
 | Azure Data Factory | Batch extraction and workflow orchestration | Planned |
@@ -104,7 +106,8 @@ flowchart LR
 | Snowflake | Alternative analytical warehouse for curated datasets and comparison with Delta Lake | Planned, later stage |
 | Terraform | Reproducible Azure infrastructure | Planned |
 | GitHub Actions | Continuous validation and deployment workflows | Planned |
-| Monitoring and logging | Pipeline health, failures and recovery | Planned |
+| Local logging | Console start/success/failure messages, traceback and successful-run duration | **In use** |
+| Cloud monitoring and recovery | Centralized telemetry, alerting and recovery workflows | Planned |
 
 **Optional exploration:** Microsoft Fabric may be evaluated after the core pipeline is complete. Snowflake is a later project stage with a specific deliverable: publish curated data, model a small analytical mart and compare it with the Delta Lake path. The roadmap favours depth and working evidence over adding tools solely for a longer list.
 
@@ -202,13 +205,25 @@ The reader prints `7` and `25` for this sample: seven records, with 25 units in 
 After applying SQL files 001–005 and loading the optional demo seed once into a fresh demo database, run the loader from the repository root:
 
 ```bash
-python src/ingestion/db.py
-python src/ingestion/db.py
+python -m src.ingestion.db
+python -m src.ingestion.db
 ```
 
-The first load of the seven new simulator IDs reports `7 lines inserted, 0 lines skipped`. A replay reports `0 lines inserted, 7 lines skipped`. The loader prints these counters after the transaction commits. A missing machine/order pair or another unhandled error rolls back that run's database changes. The default input is `events.jsonl`. To select another JSONL file without editing the source, use `python src/ingestion/db.py --input path/to/events.jsonl`. Run `python src/ingestion/db.py --help` to see the available option.
+The first load of the seven new simulator IDs reports `7 lines inserted, 0 lines skipped`. A replay reports `0 lines inserted, 7 lines skipped`. The loader logs these counters and elapsed seconds after the transaction commits and the connection closes. A missing machine/order pair or another unhandled error rolls back that run's database changes. The default input is `events.jsonl`. To select another JSONL file without editing the source, use `python -m src.ingestion.db --input path/to/events.jsonl`. Run `python -m src.ingestion.db --help` to see the available option.
 
-**Verification boundary:** these replay counters were observed locally; the next manual check is to query stored simulator events and confirm **7 rows / 35 units**. If the demo seed's 120-unit report is present, the order view includes it as well: expect **155 units** for `PO-001` after one simulator load, rather than 35. See [TESTING.md](TESTING.md) for separate Python and SQL checks and the known view-fixture gap.
+**Verification evidence:** local manual replay checks confirmed **7 stored simulator rows / 35 units**. These are manual observations, not automated integration-test results. If the demo seed's 120-unit report is present, the order view includes it as well: expect **155 units** for `PO-001` after one simulator load, rather than 35. See [TESTING.md](TESTING.md) for separate Python and SQL checks and the manual replay/rollback procedures.
+
+### Ingestion execution and diagnostics
+
+Use `python -m src.ingestion.db` from the repository root with the virtual environment activated. The loader uses an absolute package import; the former `python src/ingestion/db.py` command is no longer the documented entry point. `--input` defaults to `events.jsonl`, and relative paths are resolved from the working directory.
+
+After `load_dotenv()`, the loader rejects absent or empty `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER` and `PGPASSWORD` values before connecting. Whitespace-only values are not rejected by this check. `POSTGRES_*` variables configure the Docker container, not the Python loader. The 10-second `connect_timeout` bounds connection establishment, not SQL query duration; a refused connection can fail sooner.
+
+`main()` owns CLI/configuration, file reading, the connection context and logs. `ingest_events(connection, events)` handles the validated batch and returns `(inserted, skipped)`; it does not commit independently. Importing the module does not execute ingestion or configure logging.
+
+Console logs show a local timestamp, severity, module name and message. A start message identifies the input path. After a successful commit and connection close, the final message includes inserted/skipped counts and elapsed seconds measured with `time.perf_counter()`. Duration covers configuration after argument parsing, connection, reading, ingestion and successful context exit; it is not a throughput benchmark. `logger.exception()` records unhandled failures and `raise` preserves the failing exit status. A traceback can appear twice because the error is logged and then re-raised. Failed runs do not emit the success counters or elapsed-time summary. `--help` exits successfully without ingestion.
+
+For local rollback verification, [events_rollback_test.jsonl](events_rollback_test.jsonl) contains a valid first event (`EVT-050`) and a second event (`EVT-051`) referencing missing order `PO-123`. Use fresh source IDs and confirm that `PO-123` is absent so the test exercises rollback rather than duplicate skipping. See [TESTING.md](TESTING.md) for the SQL checks and exit-code procedure.
 
 ## Implementation plan
 
@@ -238,8 +253,11 @@ The first load of the seven new simulator IDs reports `7 lines inserted, 0 lines
 - [x] Validate field types, nonblank strings, event timestamps with offsets, event types and unit rules.
 - [x] Resolve machine/order codes and load accepted events into PostgreSQL using parameterized queries.
 - [x] Add required unique source event IDs and skip duplicate inserts; demonstrate local replay counters.
-- [ ] Verify persisted simulator row counts and production totals after replay.
-- [ ] Add automated database integration checks and update the manual view-check fixtures for required source IDs.
+- [x] Verify persisted simulator row counts and production totals after replay (7 rows / 35 units, manually).
+- [x] Exercise a batch failure and verify rollback manually.
+- [x] Add module execution, configurable input, environment checks, connection timeout and console logging with elapsed time.
+- [x] Update the manual view-check fixtures with required source IDs.
+- [ ] Add automated database integration checks for replay, rollback and loader errors.
 - [ ] Implement batch extraction from PostgreSQL using Azure Data Factory.
 - [ ] Publish and consume events through Azure Event Hubs.
 - [ ] Land raw data in ADLS Gen2.
@@ -252,7 +270,8 @@ The first load of the seven new simulator IDs reports `7 lines inserted, 0 lines
 - [ ] Publish KPIs such as throughput, production attainment and downtime.
 - [ ] Create a Power BI dashboard with documented metric definitions.
 - [ ] Publish curated datasets to Snowflake, build a small SQL/dbt mart and compare its results and operating trade-offs with the Delta Lake Gold layer.
-- [ ] Add pipeline logging, failure handling and recovery checks.
+- [x] Add local ingestion logs and preserve a nonzero exit code on unhandled failures.
+- [ ] Add centralized pipeline monitoring, recovery workflows and automated failure checks.
 - [ ] Provision infrastructure with Terraform and validate changes with GitHub Actions.
 
 The deliverable for each phase is runnable code, a reproducible setup and evidence that the data rules work. Tool choices may change if a simpler solution better serves the learning objective.
@@ -267,6 +286,7 @@ The deliverable for each phase is runnable code, a reproducible setup and eviden
 ├── TESTING.md
 ├── compose.yaml
 ├── events.jsonl
+├── events_rollback_test.jsonl
 ├── requirements.txt
 ├── docs/
 │   ├── data_dictionary.md
@@ -296,4 +316,4 @@ Only existing files are shown here. New directories will be added as their stage
 
 ## Scope and limitations
 
-FactoryPulse uses synthetic manufacturing data. The repository currently demonstrates a local PostgreSQL environment, SQL schema and checks, a fixed Python event simulator, a JSONL sample, a local JSONL reader and unit tests. The reader validates record structure, types, nonblank strings, parseable timestamps with offsets and event payload rules. The loader persists accepted events with duplicate skipping. It does not enforce machine-state sequences against historical database events, detect a changed payload under an existing source ID or implement late-event handling. The reader does not validate every SQL length/range limit, and all JSONL events currently require an order code. The manual SQL view check still needs source IDs in its fixtures. Cloud streaming remains planned. No cloud platform, analytical layers, dashboards or measured latency and throughput are deployed.
+FactoryPulse uses synthetic manufacturing data. The repository currently demonstrates a local PostgreSQL environment, SQL schema and checks, a fixed Python event simulator, a JSONL sample, a local JSONL reader and unit tests. The reader validates record structure, types, nonblank strings, parseable timestamps with offsets and event payload rules. The loader persists accepted events with duplicate skipping. It does not enforce machine-state sequences against historical database events, detect a changed payload under an existing source ID or implement late-event handling. The reader does not validate every SQL length/range limit, and all JSONL events currently require an order code. The manual SQL view check has distinct source IDs but still requires visual inspection of its totals. Automated loader integration tests are not yet implemented. Cloud streaming remains planned. No cloud platform, analytical layers, dashboards or measured latency and throughput are deployed.
