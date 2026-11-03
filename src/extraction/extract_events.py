@@ -6,7 +6,14 @@ import logging
 from pathlib import Path
 from dotenv import load_dotenv
 
+logger = logging.getLogger(__name__)
+
 def main():
+
+    logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s | %(levelname)s | %(name)s | %(message)s'
+        )
 
     parser = argparse.ArgumentParser(
         description='Extract machine events from PostgreSQL'
@@ -18,6 +25,7 @@ def main():
     )
     args = parser.parse_args()
     path = Path(args.output)
+    logger.info('Starting events extraction into %s',path)
     path.parent.mkdir(parents=True, exist_ok=True)
     load_dotenv()
 
@@ -65,6 +73,7 @@ def main():
                         'created_at': event[6].isoformat()
                     }
                     file.write(json.dumps(event_result) + '\n')
+    logger.info('Event extraction finished, %s lines were exported to %s.', len(events), path)
 
 
 
