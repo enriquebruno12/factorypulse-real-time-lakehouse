@@ -53,6 +53,27 @@ def insert_event(connection, event, machine_id, order_id):
 
     return result
 
+def ingest_events(connection, events):
+    skipped = 0
+    inserted = 0
+
+    for event in events:
+        result = get_machine_order_ids(connection, event['machine_code'], event['order_code'])
+        if result is None:
+            raise ValueError(f"Combination of machine_code {event['machine_code']} and order_code {event['order_code']} was not found, event {event['source_event_id']}")
+
+        machine_id= result[0]
+        order_id = result[1]
+
+        # Distinguish inserted rows from source IDs already present in the table.
+        inserted_event_id = insert_event(connection, event, machine_id, order_id)
+
+        if inserted_event_id is None:
+            skipped+=1
+        else:
+            inserted+=1
+    return inserted, skipped
+
 def main():
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(name)s | %(message)s')
@@ -101,24 +122,8 @@ def main():
 
         # Read and validate the complete file before the first database lookup.
         events = read_events(args.input)
-        skipped = 0
-        inserted = 0
 
-        for event in events:
-            result = get_machine_order_ids(connection, event['machine_code'], event['order_code'])
-            if result is None:
-                raise ValueError(f"Combination of machine_code {event['machine_code']} and order_code {event['order_code']} was not found, event {event['source_event_id']}")
-
-            machine_id= result[0]
-            order_id = result[1]
-
-            # Distinguish inserted rows from source IDs already present in the table.
-            inserted_event_id = insert_event(connection, event, machine_id, order_id)
-
-            if inserted_event_id is None:
-                skipped+=1
-            else:
-                inserted+=1
+        inserted, skipped = ingest_events(connection, events)
 
     elapsed_time = time.perf_counter() - start_time
 
