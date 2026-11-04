@@ -75,13 +75,9 @@ def main():
                     file.write(json.dumps(event_result) + '\n')
     logger.info('Event extraction finished, %s lines were exported to %s.', len(events), path)
 
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
-    main() 
+    try:
+        main()
+    except Exception:
+        logger.exception('Event extraction failed')
+        raise
